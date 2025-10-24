@@ -1,189 +1,284 @@
-<div class="card mb-3 p-3">
-    <h5>Pedido mayorista #1</h5>
+<style>
+  /* Ocultar todos los subformularios de proveedor por defecto */
+  #supplier_template #form-local,
+  #supplier_template #form-foraneo-oficina,
+  #supplier_template #form-foraneo-usuario,
+  #supplier_template #form-foraneo-sucursal,
+  #supplier_template #form-varias-sucursales {
+    display: none;
+  }
+</style>
+
+
+<form id="supplier_template" class="card mb-3 p-3 card-supplier" onsubmit="return false;">
+
+
+  <div class="container mt-4">
+    <h5>Formulario pedido de mayorista</h5>
 
     <div class="row g-3"> <!-- g-3 agrega espacio entre columnas -->
-
       <!-- Mayorista -->
-      <div class="col-md-4 col-12">
-        <label class="form-label">Mayorista</label>
-        <input type="text" class="form-control" name="pedidos[1][mayorista]" placeholder="Nombre del mayorista" required>
+      <div class="col-md-4 col-12 mb-3 position-relative">
+        <label for="supplier" class="form-label">Mayorista</label>
+        <input type="text" class="form-control" id="supplier" name="supplier_name" placeholder="Nombre del mayorista" required autocomplete="off">
+        <input type="hidden" id="supplier_id" name="mayorista">
+        <div id="supplier-list" class="list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
       </div>
+
 
       <!-- Número de Pedido Mayorista -->
       <div class="col-md-4 col-12">
         <label class="form-label">No. Pedido Mayorista</label>
-        <input type="text" class="form-control" name="pedidos[1][id_order]" required>
+        <input type="text" class="form-control" name="id_order" required>
       </div>
 
       <!-- Tipo de pedido -->
       <div class="col-md-4 col-12">
         <label class="form-label">Tipo de pedido</label>
-        <select class="form-select form-select-sm" id="tipo_pedido" name="pedidos[1][items][0][id_type_order]" required>
-          <option value="0">Seleccionar...</option>
-          <option value="1">Local</option>
-          <option value="2">Foráneo a ERA</option>
-          <option value="3">Proveedor a usuario final</option>
-          <option value="4">Foráneo a sucursal</option>
-          <option value="5">Varias sucursales</option>
+        <select class="form-select form-select-sm" id="tipo_pedido" name="id_type_order" required>
         </select>
       </div>
+    </div>
 
 
 
+    <div class="container mt-4">
 
-     <div class="container mt-4">
+      <!-- ================= LOCAL ================= -->
+      <form id="form_local" class="supplier-form" onsubmit="return false;">
+      <div class="card mb-3 p-3" id="form-local" style="display:none;" onsubmit="return false;">
+        <h5>Local</h5>
 
-  <!-- ================= LOCAL ================= -->
-  <div class="card mb-3 p-3" id="form-local">
-    <h5>Local</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Cantidad</th>
-            <th>Producto</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input type="number" class="form-control form-control-sm" name="local[items][0][quantity]" min="1" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="local[items][0][product]" required></td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td><input type="number" class="form-control form-control-sm" name="local[items][1][quantity]" min="1"></td>
-            <td><input type="text" class="form-control form-control-sm" name="local[items][1][product]"></td>
-          </tr>
-        </tbody>
-      </table>
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;"><input type="checkbox" class="select-all"></th>
+                <th>#</th>
+                <th>Cantidad</th>
+                <th>Producto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" class="row-check"></td>
+                <td>1</td>
+                <td>
+                  <input
+                    type="number"
+                    class="form-control form-control-sm"
+                    name="local[items][0][quantity]"
+                    min="1"
+                    required>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    name="local[items][0][product]"
+                    required>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-2">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary add-row-btn"
+            data-target="form-local">
+            ➕ Agregar partida
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger delete-row-btn"
+            data-target="form-local">
+            🗑 Eliminar seleccionadas
+          </button>
+        </div>
+      </div>
+      </form>
+
+ 
+      <!-- ================= FORÁNEO A ERA ================= -->
+       <form id="form_foraneo_era" class="supplier-form" onsubmit="return false;">
+      <div class="card mb-3 p-3" id="form-foraneo-oficina" style="display:none;">
+        <h5>Foráneo a ERA</h5>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;"><input type="checkbox" class="select-all"></th>
+                <th>#</th>
+                <th>Cantidad</th>
+                <th>Producto</th>
+                <th>No. Guía</th>
+                <th>Paquetería</th>
+                <th>Fecha estimada de llegada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" class="row-check"></td>
+                <td>1</td>
+                <td><input type="number" class="form-control form-control-sm" name="foraneo_oficina[items][0][quantity]" min="1" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][product]" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][guide_number]"></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][courier]"></td>
+                <td><input type="date" class="form-control form-control-sm" name="foraneo_oficina[items][0][eta]"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-2">
+          <button type="button" class="btn btn-sm btn-outline-primary add-row-btn" data-target="form-foraneo-oficina">
+            ➕ Agregar partida
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn" data-target="form-foraneo-oficina">
+            🗑 Eliminar seleccionadas
+          </button>
+        </div>
+      </div>
+      </form>
+
+
+      <!-- ================= PROVEEDOR A USUARIO FINAL ================= -->
+       <form id="form_proveedor_usuario" class="supplier-form" onsubmit="return false;"> 
+      <div class="card mb-3 p-3" id="form-foraneo-usuario" style="display:none;">
+        <h5>Proveedor a Usuario Final</h5>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;"><input type="checkbox" class="select-all"></th>
+                <th>#</th>
+                <th>Cantidad</th>
+                <th>Producto</th>
+                <th>No. Guía</th>
+                <th>Paquetería</th>
+                <th>Fecha estimada de llegada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" class="row-check"></td>
+                <td>1</td>
+                <td><input type="number" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][quantity]" min="1" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][product]" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][guide_number]"></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][courier]"></td>
+                <td><input type="date" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][eta]"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-2">
+          <button type="button" class="btn btn-sm btn-outline-primary add-row-btn" data-target="form-foraneo-usuario">
+            ➕ Agregar partida
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn" data-target="form-foraneo-usuario">
+            🗑 Eliminar seleccionadas
+          </button>
+        </div>
+      </div>
+      </form>
+
+
+      <!-- ================= FORÁNEO A SUCURSAL ================= -->
+       <form id="form_foraneo_sucursal" class="supplier-form" onsubmit="return false;">
+      <div class="card mb-3 p-3" id="form-foraneo-sucursal" style="display:none;">
+        <h5>Foráneo a Sucursal</h5>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;"><input type="checkbox" class="select-all"></th>
+                <th>#</th>
+                <th>Cantidad</th>
+                <th>Producto</th>
+                <th>Fecha estimada de arribo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" class="row-check"></td>
+                <td>1</td>
+                <td><input type="number" class="form-control form-control-sm" name="foraneo_sucursal[items][0][quantity]" min="1" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="foraneo_sucursal[items][0][product]" required></td>
+                <td><input type="date" class="form-control form-control-sm" name="foraneo_sucursal[items][0][eta]" required></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-2">
+          <button type="button" class="btn btn-sm btn-outline-primary add-row-btn" data-target="form-foraneo-sucursal">
+            ➕ Agregar partida
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn" data-target="form-foraneo-sucursal">
+            🗑 Eliminar seleccionadas
+          </button>
+        </div>
+      </div>
+      </form>
+
+
+      <!-- ================= VARIAS SUCURSALES ================= -->
+       <form id="form_varias_sucursales" class="supplier-form" onsubmit="return false;"> 
+      <div class="card mb-3 p-3" id="form-varias-sucursales" style="display:none;">
+        <h5>Varias Sucursales</h5>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:40px;"><input type="checkbox" class="select-all"></th>
+                <th>#</th>
+                <th>Cantidad</th>
+                <th>Producto</th>
+                <th>Sucursal de origen</th>
+                <th>Fecha estimada de arribo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" class="row-check"></td>
+                <td>1</td>
+                <td><input type="number" class="form-control form-control-sm" name="varias_sucursales[items][0][quantity]" min="1" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="varias_sucursales[items][0][product]" required></td>
+                <td><input type="text" class="form-control form-control-sm" name="varias_sucursales[items][0][origin_branch]" required></td>
+                <td><input type="date" class="form-control form-control-sm" name="varias_sucursales[items][0][eta]" required></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end mt-2">
+          <button type="button" class="btn btn-sm btn-outline-primary add-row-btn" data-target="form-varias-sucursales">
+            ➕ Agregar partida
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn" data-target="form-varias-sucursales">
+            🗑 Eliminar seleccionadas
+          </button>
+        </div>
+      </div>
+      </form>
+
+
+
+      <div class="d-flex justify-content-end mt-3">
+        <button type="button" class="btn btn-success" id="save-supplier-btn">
+          Guardar pedido proveedor
+        </button>
+      </div>
+
     </div>
   </div>
-
-  <!-- ================= FORANEO A ERA ================= -->
-  <div class="card mb-3 p-3" id="form-foraneo-oficina">
-    <h5>Foráneo a ERA</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Cantidad</th>
-            <th>Producto</th>
-            <th>No. Guía</th>
-            <th>Paquetería</th>
-            <th>Fecha estimada de llegada</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input type="number" class="form-control form-control-sm" name="foraneo_oficina[items][0][quantity]" min="1" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][product]" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][guide_number]"></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][0][courier]"></td>
-            <td><input type="date" class="form-control form-control-sm" name="foraneo_oficina[items][0][eta]"></td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td><input type="number" class="form-control form-control-sm" name="foraneo_oficina[items][1][quantity]" min="1"></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][1][product]"></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][1][guide_number]"></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_oficina[items][1][courier]"></td>
-            <td><input type="date" class="form-control form-control-sm" name="foraneo_oficina[items][1][eta]"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
-
-  <!-- ================= FORANEO USUARIO FINAL ================= -->
-  <div class="card mb-3 p-3" id="form-foraneo-usuario">
-    <h5>Proveedor a Usuario Final</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Cantidad</th>
-            <th>Producto</th>
-            <th>No. Guía</th>
-            <th>Paquetería</th>
-            <th>Fecha estimada de llegada</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input type="number" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][quantity]" min="1" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][product]" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][guide_number]"></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][courier]"></td>
-            <td><input type="date" class="form-control form-control-sm" name="foraneo_usuario_final[items][0][eta]"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ================= FORANEO SUCURSAL ================= -->
-  <div class="card mb-3 p-3"  id="form-foraneo-sucursal">
-    <h5>Foráneo a Sucursal</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Cantidad</th>
-            <th>Producto</th>
-            <th>Fecha estimada de arribo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input type="number" class="form-control form-control-sm" name="foraneo_sucursal[items][0][quantity]" min="1" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="foraneo_sucursal[items][0][product]" required></td>
-            <td><input type="date" class="form-control form-control-sm" name="foraneo_sucursal[items][0][eta]" required></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ================= VARIAS SUCURSALES ================= -->
-  <div class="card mb-3 p-3" id="form-varias-sucursales">
-    <h5>Varias Sucursales</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Cantidad</th>
-            <th>Producto</th>
-            <th>Sucursal de origen</th>
-            <th>Fecha estimada de arribo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><input type="number" class="form-control form-control-sm" name="varias_sucursales[items][0][quantity]" min="1" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="varias_sucursales[items][0][product]" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="varias_sucursales[items][0][origin_branch]" required></td>
-            <td><input type="date" class="form-control form-control-sm" name="varias_sucursales[items][0][eta]" required></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-
-
-
-
-    </div>
-  </div>
+  </main>

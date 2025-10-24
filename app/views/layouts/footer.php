@@ -1,7 +1,7 @@
 <!-- app/views/layouts/footer.php -->
-<footer class="bg-light text-center p-3 mt-5">
-    &copy; <?= date('Y') ?> ERA COMPUTACIONAL
-</footer>
+<footer class="bg-dark text-white text-center py-3 fixed-bottom">
+    © 2025 ERA COMPUTACIONAL
+  </footer>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
 </body>

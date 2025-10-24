@@ -39,11 +39,154 @@ return [
         'public' => false
     ],
 
-    'app_orders' => [
-    'controller' => 'OrdersController',
-    'method' => 'myOrders',
-    'public' => false
-],
 
-    // Aquí puedes agregar 50, 100 o 200 rutas sin tocar el router
+    'my_system_orders' => [
+        'controller' => 'OrdersController',
+        'method' => 'myOrders',
+        'public' => false
+    ],
+
+    'create_order' => [
+        'controller' => 'OrdersController',
+        'method' => 'createOrder',
+        'public' => false
+    ],
+
+    'search_customer' => [
+        'controller' => 'OrdersController',
+        'method' => 'searchCustomer',
+        'public' => false
+    ],
+
+    'create_customer' => [
+        'controller' => 'OrdersController',
+        'method' => 'createCustomerController',
+        'public' => false
+    ],
+
+    'auto_save_customer' => [
+        'controller' => 'OrdersController',
+        'method' => 'autoSaveCustomer',
+        'public' => false
+    ],
+
+    'delete_temporary_order' => [
+        'controller' => 'OrdersController',
+        'method' => 'deleteTemporaryOrder',
+        'public' => false
+    ],
+
+    'get_supplier_order_types' => [
+        'controller' => 'OrdersController',
+        'method' => 'getSupplierOrderTypes',
+        'public' => false
+    ],
+
+    'save_single_supplier_order' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'saveSingleSupplierOrder',
+        'public' => false
+    ],
+
+    'get_supplier_orders' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'getSupplierOrders',
+        'public' => false
+    ],
+
+    'get_supplier_items' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'getSupplierItems',
+        'public' => false
+    ],
+
+    'cancel_supplier_order' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'cancelSupplierOrder',
+        'public' => false
+    ],
+
+    'suppliers_list' => [
+        'controller' => 'SuppliersController',
+        'method' => 'getSuppliers',
+        'public' => false
+    ],
+
+    'create_supplier' => [
+        'controller' => 'SuppliersController',
+        'method' => 'createSupplier',
+        'public' => false
+    ],
+
+    'update_supplier_order' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'updateSupplierOrder',
+        'public' => false
+    ],
+
+    'update_supplier_item' => [
+        'controller' => 'SupplierOrdersController',
+        'method' => 'updateSupplierItem',
+        'public' => false
+    ],
+
+    // ==========================================================
+    // TRACKING DE PEDIDOS PROVEEDOR (seguimiento)
+    // ==========================================================
+    'get_tracking_by_item' => [
+        'controller' => 'TrackingSupplierOrdersController',
+        'method' => 'getTrackingByItem',
+        'public' => false
+    ],
+
+    'update_tracking' => [
+        'controller' => 'TrackingSupplierOrdersController',
+        'method' => 'updateTracking',
+        'public' => false
+    ],
+
+    'logout' => [
+        'controller' => 'LoginController',
+        'method' => 'logout',
+        'public' => false
+    ],
+
+    'pickups' => [
+        'controller' => 'PickupsController',
+        'method' => 'index',
+        'public' => false
+    ],
+
+    'api_get_items_by_order' => [
+        'controller' => 'SupplierItemsController',
+        'method' => 'getItemsByOrder',
+        'public' => false
+    ],
+
+
+    'update_item_status' => [
+        'controller' => 'SupplierItemsController',
+        'method' => 'updateItemStatus',
+        'public' => false
+    ],
+
+
+    'other_trips' => [
+        'controller' => 'OtherTripsController',
+        'method' => 'index',
+        'public' => false
+    ],
+
+    'api_other_trips_store' => [
+        'controller' => 'OtherTripsController',
+        'method' => 'store',
+        'public' => false
+    ],
+
+    'api_other_trips_update' => [
+        'controller' => 'OtherTripsController',
+        'method' => 'update',
+        'public' => false
+    ],
+
 ];

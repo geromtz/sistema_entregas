@@ -23,7 +23,7 @@ class AppController {
         // 4️⃣ Determinar vista solicitada
         $pageToLoad = $_GET['view'] ?? 'dashboard_sales';
         $basePath   = realpath(__DIR__ . '/../../');
-        $viewFile   = $basePath . "/app/views/{$pageToLoad}.php";
+        $viewFile = $basePath . "/views/{$pageToLoad}.php";
 
         echo '<div class="container mt-4">';
 

@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+
 // Autoload de controllers, models y middleware
 spl_autoload_register(function ($class_name) {
     $paths = [

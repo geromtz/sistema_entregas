@@ -1,40 +1,36 @@
 <?php
 // app/views/layouts/app.php
 
-// Creamos instancia de menú y generamos el árbol para el usuario logueado
+require_once __DIR__ . '/header.php';
+require_once __DIR__ . '/../../models/Menu.php';
+
+// Generar menú dinámico
 $menuModel = new Menu();
 $menuTree = $menuModel->buildMenuTree(
     $menuModel->getMenusByDepartment($_SESSION['user']['department_id'])
 );
-
-// Cargamos el header (navbar)
-require_once __DIR__ . '/header.php';
 ?>
 
-<div class="container mt-4">
-    <h1>Bienvenido a Era Computacional, <?= $_SESSION['user']['fullname'] ?>!</h1>
+<div class="container mt-4" style="margin-bottom: 100px;">
+    <h1>Usuario: <?= htmlspecialchars($_SESSION['user']['fullname']) ?></h1>
 
     <?php
-    // $view debe venir definido por el controller
+    // Validar que la vista interna esté definida
     if (!isset($view)) {
         echo "<div class='alert alert-warning'>No se definió la vista interna.</div>";
-        return;
-    }
-
-    $basePath = realpath(__DIR__ . '/../../'); // Raíz del proyecto
-    $viewFile = $basePath . "/app/views/{$view}.php";
-
-    // Depuración opcional
-    // echo "<pre>Intentando cargar: {$viewFile}</pre>";
-
-    if (file_exists($viewFile)) {
-        include $viewFile;
     } else {
-        echo "<div class='alert alert-warning'>Vista '{$view}' no encontrada.</div>";
+        // Construir la ruta completa de la vista
+        $viewFile = __DIR__ . "/../{$view}.php";
+
+        if (file_exists($viewFile)) {
+            include $viewFile;
+        } else {
+            echo "<div class='alert alert-warning'>Vista '{$view}' no encontrada.</div>";
+        }
     }
     ?>
 </div>
 
 <?php
-// Cargamos el footer
+// Cargar footer
 require_once __DIR__ . '/footer.php';

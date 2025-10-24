@@ -44,4 +44,25 @@ class LoginController {
             $this->index();
         }
     }
+
+        // Cierra la sesión del usuario
+    public function logout() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // Limpiar variables de sesión
+        $_SESSION = [];
+        session_unset();
+        session_destroy();
+
+        // (Opcional) limpiar cookies “recordar sesión”
+        if (isset($_COOKIE['remember_token'])) {
+            setcookie('remember_token', '', time() - 3600, '/');
+        }
+
+        // Redirigir al login con mensaje
+        header('Location: index.php?page=login&msg=logout');
+        exit;
+    }
 }
