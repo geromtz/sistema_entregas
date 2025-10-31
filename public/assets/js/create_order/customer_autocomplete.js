@@ -7,6 +7,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const userId = document.getElementById("system_order_id")?.dataset.userId || 0;
   const addSupplierBtn = document.getElementById("addSupplierOrder");
 
+
+    // ---------------------------
+  // 📄 CARGAR SELECT "USO CFDI"
+  // ---------------------------
+  const usoCfdiSelect = document.getElementById("uso_cfdi");
+
+  async function loadUsosCfdi() {
+    if (!usoCfdiSelect) return;
+
+    try {
+      const res = await fetch("index.php?page=get_usos_cfdi");
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        data.data.forEach((u) => {
+          const option = document.createElement("option");
+          option.value = u.id;
+          option.textContent = `${u.uso_cfdi} - ${u.descripcion}`;
+          usoCfdiSelect.appendChild(option);
+        });
+
+        // ✅ Si ya hay valor guardado (modo edición), lo seleccionamos automáticamente
+        const currentValue = usoCfdiSelect.dataset.currentValue;
+        if (currentValue) usoCfdiSelect.value = currentValue;
+
+      } else {
+        console.warn("⚠️ No se encontraron usos CFDI para cargar.");
+      }
+    } catch (err) {
+      console.error("❌ Error al cargar usos CFDI:", err);
+    }
+  }
+
+  // Ejecutar carga al iniciar
+  loadUsosCfdi();
+
+
   // 🔹 Campos del formulario (excepto cliente y PDF)
   const inputs = document.querySelectorAll(
     "input:not(#customer):not(#customer_id):not(#pdf_order_file), textarea, select"

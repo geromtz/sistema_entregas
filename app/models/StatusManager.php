@@ -18,53 +18,82 @@ class StatusManager
     /* ===========================================================
        🔹 1. Actualiza estado del supplier_order según sus ítems
        =========================================================== */
-    public function updateSupplierOrderStatus($supplierOrderId)
-    {
-        // Contar ítems por estado
-        $sql = "SELECT 
-                    SUM(CASE WHEN id_status = 3 THEN 1 ELSE 0 END) AS completos,
-                    SUM(CASE WHEN id_status = 2 THEN 1 ELSE 0 END) AS parciales,
-                    SUM(CASE WHEN id_status = 1 THEN 1 ELSE 0 END) AS pendientes,
-                    SUM(CASE WHEN id_status = 4 THEN 1 ELSE 0 END) AS cancelados,
-                    COUNT(*) AS total
-                FROM items_supplier_order
-                WHERE id_supplier_order = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$supplierOrderId]);
-        $counts = $stmt->fetch(PDO::FETCH_ASSOC);
+public function updateSupplierOrderStatus($supplierOrderId)
+{
+    // 🧩 Verificar si el pedido ya fue cancelado manualmente
+    $checkStatus = $this->db->prepare("SELECT id_status FROM supplier_orders WHERE id = ?");
+    $checkStatus->execute([$supplierOrderId]);
+    $currentStatus = $checkStatus->fetchColumn();
 
-        if (!$counts) return false;
-        if ($counts['total'] == 0) return true; // 🧩 sin ítems aún → mantener estado actual
+    if (!$currentStatus) return false;
 
-        $newStatus = 1; // pendiente
-
-        if ($counts['cancelados'] == $counts['total']) {
-            $newStatus = 5; // cancelado
-        } elseif ($counts['completos'] == $counts['total']) {
-            $newStatus = 4; // completo
-        } elseif ($counts['parciales'] > 0 || ($counts['completos'] > 0 && $counts['pendientes'] > 0)) {
-            $newStatus = 3; // parcial
-        } elseif ($counts['pendientes'] > 0) {
-            $newStatus = 2; // en proceso
-        }
-
-        $update = $this->db->prepare("
-            UPDATE supplier_orders 
-            SET id_status = ?, supplier_order_last_update = NOW() 
-            WHERE id = ?
+    // 🚨 Si ya está cancelado → cancelar ítems también y salir
+    if ((int)$currentStatus === 5) {
+        $cancelItems = $this->db->prepare("
+            UPDATE items_supplier_order
+            SET id_status = 4, items_supplier_order_last_update = NOW()
+            WHERE id_supplier_order = ?
         ");
-        $update->execute([$newStatus, $supplierOrderId]);
+        $cancelItems->execute([$supplierOrderId]);
 
-        // Obtener el id_customer_order relacionado
+        // 🔄 Propagar hacia arriba (pedido cliente y sistema)
         $getParent = $this->db->prepare("SELECT id_customer_order FROM supplier_orders WHERE id = ?");
         $getParent->execute([$supplierOrderId]);
         $parent = $getParent->fetchColumn();
 
-        // Propagar cambio hacia arriba
         if ($parent) $this->updateCustomerOrderStatus($parent);
 
         return true;
     }
+
+    // =======================================================
+    // 📊 Recalcular estado según ítems (caso normal)
+    // =======================================================
+    $sql = "SELECT 
+                SUM(CASE WHEN id_status = 3 THEN 1 ELSE 0 END) AS completos,
+                SUM(CASE WHEN id_status = 2 THEN 1 ELSE 0 END) AS parciales,
+                SUM(CASE WHEN id_status = 1 THEN 1 ELSE 0 END) AS pendientes,
+                SUM(CASE WHEN id_status = 4 THEN 1 ELSE 0 END) AS cancelados,
+                COUNT(*) AS total
+            FROM items_supplier_order
+            WHERE id_supplier_order = ?";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$supplierOrderId]);
+    $counts = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$counts) return false;
+    if ($counts['total'] == 0) return true; // 🧩 sin ítems → no recalcula
+
+    $newStatus = 1; // pendiente
+
+    if ($counts['cancelados'] == $counts['total']) {
+        $newStatus = 5; // cancelado
+    } elseif ($counts['completos'] == $counts['total']) {
+        $newStatus = 4; // completo
+    } elseif ($counts['parciales'] > 0 || ($counts['completos'] > 0 && $counts['pendientes'] > 0)) {
+        $newStatus = 3; // parcial
+    } elseif ($counts['pendientes'] > 0) {
+        $newStatus = 2; // en proceso
+    }
+
+    // 🧾 Actualizar el pedido con su nuevo estado
+    $update = $this->db->prepare("
+        UPDATE supplier_orders 
+        SET id_status = ?, supplier_order_last_update = NOW() 
+        WHERE id = ?
+    ");
+    $update->execute([$newStatus, $supplierOrderId]);
+
+    // 🪜 Propagar hacia arriba
+    $getParent = $this->db->prepare("SELECT id_customer_order FROM supplier_orders WHERE id = ?");
+    $getParent->execute([$supplierOrderId]);
+    $parent = $getParent->fetchColumn();
+
+    if ($parent) $this->updateCustomerOrderStatus($parent);
+
+    return true;
+}
+
 
     /* ===========================================================
        🔹 2. Actualiza estado del customer_order según suppliers

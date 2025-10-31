@@ -5,7 +5,7 @@ class OtherTrip
 {
     private $db;
 
-    public function __construct()
+    Public function __construct()
     {
         $database = new Database();
         $this->db = $database->getConnection();

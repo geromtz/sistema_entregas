@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const poInput = document.getElementById("order_number");
   const commentsInput = document.querySelector('input[name="comments"]');
   const attnInput = document.querySelector('input[name="receiver"]');
+  const usoCfdiSelect = document.getElementById("uso_cfdi");
 
   if (!customerIdInput) {
     console.warn("⚠️ Campo #customer_id no encontrado. Auto-save desactivado.");
@@ -39,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("purchase_order", poInput?.value || "");
     formData.append("comments", commentsInput?.value || "");
     formData.append("attn", attnInput?.value || "");
+    formData.append("id_uso_cfdi", usoCfdiSelect?.value || "");
 
     try {
       const res = await fetch("index.php?page=auto_save_customer", {
@@ -110,6 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     poInput,
     commentsInput,
     attnInput,
+    usoCfdiSelect,
   ].forEach((el) => {
     if (el) {
       el.addEventListener("blur", saveCustomer);
@@ -131,4 +134,105 @@ document.addEventListener("DOMContentLoaded", () => {
     attributes: true,
     attributeFilter: ["value"],
   });
+
+  // ========================================================================
+  // 📄 SUBIDA AUTOMÁTICA DE PDF DE LA ORDEN DE COMPRA
+  // ========================================================================
+  const pdfInput = document.getElementById("order_pdf");
+
+  if (pdfInput) {
+    pdfInput.disabled = false; // 🔓 Habilitar el campo si estaba desactivado
+
+    pdfInput.addEventListener("change", async () => {
+      const file = pdfInput.files[0];
+      const systemOrderInput = document.getElementById("system_order_id");
+      const systemOrderId = systemOrderInput?.value || "";
+
+      if (!file || !systemOrderId) {
+        alert("Falta el archivo o el ID de la orden.");
+        return;
+      }
+
+      if (file.type !== "application/pdf") {
+        alert("Solo se permiten archivos PDF.");
+        pdfInput.value = "";
+        return;
+      }
+
+      console.log("📤 Subiendo PDF de la orden...");
+
+      const formData = new FormData();
+      formData.append("order_pdf", file);
+      formData.append("system_order_id", systemOrderId);
+
+      try {
+        const res = await fetch("index.php?page=upload_purchase_order", {
+          method: "POST",
+          body: formData,
+        });
+
+        const text = await res.text();
+        console.group("📥 Respuesta del servidor (upload_purchase_order)");
+        console.log(text);
+        console.groupEnd();
+
+        const data = JSON.parse(text);
+        const alertContainer = document.getElementById("alertContainer");
+
+        if (data.success) {
+          console.log("✅ PDF subido correctamente:", data.path);
+
+          // 🟢 Mostrar alerta visual de éxito
+          if (alertContainer) {
+            alertContainer.innerHTML = `
+        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-2" role="alert">
+          📎 PDF subido: ${data.name}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      `;
+          }
+
+          // 🟢 Guardar ruta en el input oculto
+          const pdfPathInput = document.getElementById("order_pdf_path");
+          if (pdfPathInput) pdfPathInput.value = data.path;
+
+          // 🧩 ACTUALIZAR EL BOTÓN DE VISUALIZACIÓN
+          const pdfContainer = document.getElementById("pdf-viewer-container");
+          if (pdfContainer) {
+            pdfContainer.innerHTML = `
+        <a 
+          href="index.php?page=download_purchase_order&system_order_id=${systemOrderId}"
+          class="btn btn-outline-primary btn-sm"
+          target="_blank"
+          id="view-pdf-btn">
+          📎 Ver PDF
+        </a>
+        <small class="text-muted ms-2">(${data.name})</small>
+      `;
+          }
+        } else {
+          if (alertContainer) {
+            alertContainer.innerHTML = `
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-2" role="alert">
+          ⚠️ Error al subir el PDF: ${data.message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      `;
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error en la subida de PDF:", error);
+
+        const alertContainer = document.getElementById("alertContainer");
+        if (alertContainer) {
+          alertContainer.innerHTML = `
+      <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-2" role="alert">
+        ❌ Error al subir PDF.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+      </div>
+    `;
+        }
+      }
+    });
+  }
 });

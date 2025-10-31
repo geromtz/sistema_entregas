@@ -121,6 +121,37 @@ public function getStatusNameById(int $statusId): ?string
 }
 
 
+public function cancelOrderAndItems(int $supplierOrderId): bool
+{
+    // 1️⃣ Cancelar el pedido principal
+    $stmt = $this->db->prepare("
+        UPDATE supplier_orders
+        SET id_status = 5, supplier_order_last_update = NOW()
+        WHERE id = ?
+    ");
+    $stmt->execute([$supplierOrderId]);
+
+    if ($stmt->rowCount() === 0) {
+        return false; // no se actualizó nada
+    }
+
+    // 2️⃣ Cancelar todas sus partidas (items)
+    $updateItems = $this->db->prepare("
+        UPDATE items_supplier_order
+        SET id_status = 4, items_supplier_order_last_update = NOW()
+        WHERE id_supplier_order = ?
+    ");
+    $updateItems->execute([$supplierOrderId]);
+
+    // 3️⃣ Actualizar jerarquía superior (cliente y sistema)
+    require_once __DIR__ . '/StatusManager.php';
+    $statusManager = new StatusManager($this->db);
+    $statusManager->updateSupplierOrderStatus($supplierOrderId);
+
+    return true;
+}
+
+
 
 
     

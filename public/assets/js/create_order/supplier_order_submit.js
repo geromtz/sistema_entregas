@@ -91,6 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5.1️⃣ Agregar datos de cabecera esperados por el backend
     fd.append("customer_order_id", customerOrderId);
     fd.append("mayorista", supplierId);
+    fd.append("id_branch", document.getElementById("branch_id")?.value || 1);
     fd.append("id_order", orderNumber);
     fd.append("id_type_order", String(tipoNum));
 

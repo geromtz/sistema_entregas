@@ -102,8 +102,8 @@ return [
 
     'cancel_supplier_order' => [
         'controller' => 'SupplierOrdersController',
-        'method' => 'cancelSupplierOrder',
-        'public' => false
+        'method'     => 'cancelSupplierOrder',
+        'public'     => false
     ],
 
     'suppliers_list' => [
@@ -130,6 +130,36 @@ return [
         'public' => false
     ],
 
+    'supplier_branches_list' => [
+        'controller' => 'SuppliersController',
+        'method'     => 'getBranchesBySupplier',
+        'public'     => false
+    ],
+
+    'create_supplier_branch' => [
+        'controller' => 'SuppliersController',
+        'method'     => 'createBranch',
+        'public'     => false
+    ],
+
+    'get_usos_cfdi' => [
+        'controller' => 'OrdersController',
+        'method' => 'getUsosCfdi',
+        'public' => false
+    ],
+
+    'upload_purchase_order' => [
+        'controller' => 'OrdersController',
+        'method' => 'uploadPurchaseOrder',
+        'public' => false
+    ],
+
+    'download_purchase_order' => [
+        'controller' => 'OrdersController',
+        'method' => 'downloadPurchaseOrder',
+        'public' => false
+    ],
+
     // ==========================================================
     // TRACKING DE PEDIDOS PROVEEDOR (seguimiento)
     // ==========================================================
@@ -151,11 +181,6 @@ return [
         'public' => false
     ],
 
-    'pickups' => [
-        'controller' => 'PickupsController',
-        'method' => 'index',
-        'public' => false
-    ],
 
     'api_get_items_by_order' => [
         'controller' => 'SupplierItemsController',
@@ -188,5 +213,87 @@ return [
         'method' => 'update',
         'public' => false
     ],
+
+    // MAIN LOGISTIC
+    'main_logistic' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'index',
+        'public' => false
+    ],
+    'api_fetch_data' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_fetch_data',
+        'public' => false
+    ],
+    'api_list_drivers' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_list_drivers',
+        'public' => false
+    ],
+    // 👥 NUEVO ENDPOINT: Listado de todos los usuarios (para eventos manuales)
+    'api_list_all_users' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_list_all_users',
+        'public' => false
+    ],
+    'api_create_route' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_create_route',
+        'public' => false
+    ],
+    'api_assign_to_route' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_assign_to_route',
+        'public' => false
+    ],
+    'api_assign_trip_driver' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_assign_trip_driver',
+        'public' => false
+    ],
+    'api_register_manual_event' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_register_manual_event',
+        'public' => false
+    ],
+    'api_assign_bulk' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'api_assign_bulk',
+        'public' => false
+    ],
+
+    // ==========================================================
+    // RUTAS DEL MÓDULO LOGÍSTICO (PANEL FACTURISTA)
+    // ==========================================================
+    'logistic_pickups' => [
+        'controller' => 'LogisticPickupsController',
+        'method'     => 'index',
+        'public'     => false
+    ],
+
+    'api_logistic_initialize' => [
+        'controller' => 'LogisticInitController',
+        'method'     => 'initialize',
+        'public'     => false
+    ],
+
+    'api_list_supplier_orders' => [
+        'controller' => 'LogisticPickupsController',
+        'method'     => 'api_list_supplier_orders',
+        'public'     => false
+    ],
+
+    'api_list_logistic_items' => [
+        'controller' => 'LogisticPickupsController',
+        'method'     => 'api_list_logistic_items',
+        'public'     => false
+    ],
+
+
+
+
+
+
+
 
 ];

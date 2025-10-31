@@ -64,6 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Cambiar tipo de pedido → mostrar subform
   tipoPedidoSelect?.addEventListener("change", (e) => {
+    
+
     hideAllForms();
     const val = String(e.target.value || "");
     switch (val) {
@@ -74,6 +76,28 @@ document.addEventListener("DOMContentLoaded", () => {
       case "5": showForm("form-foraneo-usuario"); break;
       default: window.activeSupplierFormId = null; break;
     }
+
+
+    // 🔹 Habilitar/Deshabilitar campo de Sucursal
+      const branchInput = document.getElementById("branch");
+      const branchHidden = document.getElementById("branch_id");
+      const branchList = document.getElementById("branch-list");
+
+      if (branchInput) {
+      const tipo = parseInt(e.target.value, 10);
+      if (tipo === 1 || tipo === 3) {
+      branchInput.disabled = false;
+      branchInput.placeholder = "Nombre de la sucursal...";
+      branchInput.classList.remove("bg-light");
+        } else {
+      branchInput.disabled = true;
+      branchInput.value = "";
+      branchHidden.value = "";
+      if (branchList) branchList.innerHTML = "";
+      branchInput.placeholder = "No aplica para este tipo de pedido";
+      branchInput.classList.add("bg-light");
+  }
+}
   });
 
   // Botón cerrar (X) del template (si quieres agregarlo dinámicamente)

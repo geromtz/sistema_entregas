@@ -34,11 +34,11 @@ class SupplierOrdersController
             // Obtener siguiente número de pedido proveedor dentro del pedido cliente
             $itemNumber = $supplierModel->getNextItemNumber((int)$customerOrderId);
 
-            // Crear el pedido proveedor principal
             $supplierOrderId = $supplierModel->createSupplierOrder([
                 'id_customer_order' => $customerOrderId,
                 'id_status'         => 1, // pendiente
                 'id_supplier'       => $_POST['mayorista'] ?? null,
+                'id_branch'         => $_POST['id_branch'] ?? 1, // 🟢 Nuevo campo (valor por defecto = 1)
                 'item_number'       => $itemNumber,
                 'supplier_order'    => $_POST['id_order'] ?? '',
                 'id_order_type'     => $_POST['id_type_order'] ?? 0,
@@ -182,36 +182,48 @@ class SupplierOrdersController
      * Endpoint: index.php?page=cancel_supplier_order
      */
     public function cancelSupplierOrder()
-    {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        header('Content-Type: application/json; charset=utf-8');
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    header('Content-Type: application/json; charset=utf-8');
 
-        $supplierOrderId = $_POST['supplier_order_id'] ?? null;
-        if (!$supplierOrderId) {
-            echo json_encode(['success' => false, 'message' => 'Falta el ID del pedido.']);
-            return;
-        }
+    $supplierOrderId = $_POST['supplier_order_id'] ?? null;
 
-        try {
-            $supplierModel = new SupplierOrder();
-            $conn = $supplierModel->getConnection();
-
-            // 🔴 Cancelar el pedido proveedor
-            $sql = "UPDATE supplier_orders 
-                    SET id_status = 5, supplier_order_last_update = NOW() 
-                    WHERE id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([$supplierOrderId]);
-
-            // 🔄 Actualizar estados en cascada (customer_order y system_order)
-            $statusManager = new StatusManager($conn);
-            $statusManager->updateSupplierOrderStatus($supplierOrderId);
-
-            echo json_encode(['success' => true, 'message' => 'Pedido cancelado correctamente.']);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-        }
+    if (!$supplierOrderId) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Falta el ID del pedido proveedor.'
+        ]);
+        return;
     }
+
+    try {
+        $supplierModel = new SupplierOrder();
+
+        // ✅ Llamar al método completo que cancela pedido + ítems + jerarquía
+        $success = $supplierModel->cancelOrderAndItems((int)$supplierOrderId);
+
+        if ($success) {
+            echo json_encode([
+                'success' => true,
+                'message' => '🛑 Pedido y partidas canceladas correctamente.'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No se encontró o no se pudo cancelar el pedido.'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al cancelar: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
+
 
     public function updateSupplierOrder()
     {
@@ -222,6 +234,7 @@ class SupplierOrdersController
         $supplierId      = $_POST['id_supplier'] ?? null;
         $orderNumber     = $_POST['supplier_order'] ?? null;
         $orderTypeId     = $_POST['id_order_type'] ?? null;
+        $branchId        = $_POST['id_branch'] ?? null;
 
         if (!$supplierOrderId) {
             echo json_encode(['success' => false, 'message' => 'Falta el ID del pedido proveedor.']);
@@ -232,20 +245,23 @@ class SupplierOrdersController
             $supplierModel = new SupplierOrder();
             $conn = $supplierModel->getConnection();
 
-            $stmt = $conn->prepare("
+            $sql = "
             UPDATE supplier_orders
-            SET id_supplier = :supplier_id,
+            SET 
+                id_supplier = :supplier_id,
                 supplier_order = :supplier_order,
                 id_order_type = :order_type,
+                id_branch = :branch_id,
                 supplier_order_last_update = NOW()
             WHERE id = :id
-        ");
-
+        ";
+            $stmt = $conn->prepare($sql);
             $stmt->execute([
-                ':supplier_id' => $supplierId,
+                ':supplier_id'   => $supplierId ?: null,
                 ':supplier_order' => $orderNumber,
-                ':order_type' => $orderTypeId,
-                ':id' => $supplierOrderId,
+                ':order_type'    => $orderTypeId,
+                ':branch_id'     => $branchId ?: 1, // ⚙️ “1 = No aplica” por defecto
+                ':id'            => $supplierOrderId,
             ]);
 
             echo json_encode(['success' => true, 'message' => 'Pedido proveedor actualizado correctamente.']);
@@ -253,6 +269,7 @@ class SupplierOrdersController
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }
+
 
 
     public function updateSupplierItem()

@@ -78,24 +78,32 @@ class Order
     }
 
 
-    public function getCustomerOrderBySystemId(int $systemOrderId): ?array
-    {
-        try {
-            $stmt = $this->db->prepare("
-            SELECT co.*, c.business_name
+public function getCustomerOrderBySystemId(int $systemOrderId): ?array
+{
+    try {
+        $stmt = $this->db->prepare("
+            SELECT 
+                co.*, 
+                c.business_name,
+                co.id_uso_cfdi,            -- ✅ aseguramos traerlo
+                ucf.uso_cfdi AS uso_cfdi,  -- ✅ opcional: nombre del CFDI
+                ucf.descripcion AS uso_cfdi_desc -- opcional: descripción
             FROM customer_orders co
             LEFT JOIN customers c ON c.id = co.id_customer
+            LEFT JOIN usos_cfdi ucf ON ucf.id = co.id_uso_cfdi
             WHERE co.id_system_order = :systemOrderId
             LIMIT 1
         ");
-            $stmt->execute([':systemOrderId' => $systemOrderId]);
-            $customerOrder = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $customerOrder ?: null;
-        } catch (PDOException $e) {
-            error_log('Error fetching customer order: ' . $e->getMessage());
-            return null;
-        }
+        $stmt->execute([':systemOrderId' => $systemOrderId]);
+        $customerOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $customerOrder ?: null;
+    } catch (PDOException $e) {
+        error_log('Error fetching customer order: ' . $e->getMessage());
+        return null;
     }
+}
+
+
 
 
 
@@ -424,20 +432,30 @@ class Order
     }
 
 
-    public function saveCustomerOrderAndMarkPending(int $systemOrderId, array $data, int $userId): bool
+public function saveCustomerOrderAndMarkPending(int $systemOrderId, array $data, int $userId): bool
 {
     try {
-        // 1️⃣ Validar cliente existente (si viene un id_customer)
+        // 1️⃣ Validar cliente existente
         $idCustomer = !empty($data['id_customer']) ? (int)$data['id_customer'] : null;
         if ($idCustomer) {
             $stmtCheck = $this->db->prepare("SELECT COUNT(*) FROM customers WHERE id = :id");
             $stmtCheck->execute([':id' => $idCustomer]);
             if ($stmtCheck->fetchColumn() == 0) {
-                $idCustomer = null; // cliente inválido, lo tratamos como null
+                $idCustomer = null;
             }
         }
 
-        // 2️⃣ Verificar si ya existe un registro en customer_orders
+        // ⚙️ Nuevo: validar id_uso_cfdi
+        $idUsoCfdi = !empty($data['id_uso_cfdi']) ? (int)$data['id_uso_cfdi'] : null;
+        if ($idUsoCfdi) {
+            $stmtCheckCfdi = $this->db->prepare("SELECT COUNT(*) FROM usos_cfdi WHERE id = :id");
+            $stmtCheckCfdi->execute([':id' => $idUsoCfdi]);
+            if ($stmtCheckCfdi->fetchColumn() == 0) {
+                $idUsoCfdi = null; // si no existe, lo dejamos como null
+            }
+        }
+
+        // 2️⃣ Verificar si ya existe customer_order
         $stmt = $this->db->prepare("
             SELECT id FROM customer_orders WHERE id_system_order = :systemOrderId LIMIT 1
         ");
@@ -449,6 +467,7 @@ class Order
             $stmt = $this->db->prepare("
                 UPDATE customer_orders
                 SET id_customer = :id_customer,
+                    id_uso_cfdi = :id_uso_cfdi,
                     name_order = :name_order,
                     purchase_order = :purchase_order,
                     attn = :attn,
@@ -456,37 +475,34 @@ class Order
                     co_last_update_date = NOW()
                 WHERE id_system_order = :systemOrderId
             ");
-
             $stmt->execute([
                 ':systemOrderId'  => $systemOrderId,
                 ':id_customer'    => $idCustomer,
+                ':id_uso_cfdi'    => $idUsoCfdi,
                 ':name_order'     => $data['name_order'] ?? '',
                 ':purchase_order' => $data['purchase_order'] ?? '',
                 ':attn'           => $data['attn'] ?? '',
-                ':comments'       => $data['comments'] ?? ''
+                ':comments'       => $data['comments'] ?? '',
             ]);
         } else {
-            // 🆕 Insertar nuevo registro (cuando el usuario empieza a llenar)
-            
-            // 2.1️⃣ Obtener la serie del usuario
+            // 🆕 Insertar nuevo registro
             $series = $this->getUserSeries($userId) ?? 'DEFAULT';
-            
-            // 2.2️⃣ Calcular el siguiente número consecutivo
             $nextNumber = $this->getNextOrderNumber($series);
 
-            // 2.3️⃣ Insertar registro con serie y número asignados
             $stmt = $this->db->prepare("
                 INSERT INTO customer_orders
-                (id_system_order, order_seller_series, order_seller_number, id_customer, name_order, purchase_order, attn, comments, created_by, customer_order_date, co_last_update_date, id_status)
+                (id_system_order, order_seller_series, order_seller_number, id_customer, id_uso_cfdi,
+                 name_order, purchase_order, attn, comments, created_by, customer_order_date, co_last_update_date, id_status)
                 VALUES
-                (:systemOrderId, :series, :number, :id_customer, :name_order, :purchase_order, :attn, :comments, :userId, NOW(), NOW(), 1)
+                (:systemOrderId, :series, :number, :id_customer, :id_uso_cfdi,
+                 :name_order, :purchase_order, :attn, :comments, :userId, NOW(), NOW(), 1)
             ");
-
             $stmt->execute([
                 ':systemOrderId'  => $systemOrderId,
                 ':series'         => $series,
                 ':number'         => $nextNumber,
                 ':id_customer'    => $idCustomer,
+                ':id_uso_cfdi'    => $idUsoCfdi,
                 ':name_order'     => $data['name_order'] ?? '',
                 ':purchase_order' => $data['purchase_order'] ?? '',
                 ':attn'           => $data['attn'] ?? '',
@@ -495,7 +511,7 @@ class Order
             ]);
         }
 
-        // 3️⃣ Si tiene cliente válido, marcar la orden del sistema como Pendiente
+        // 3️⃣ Marcar la orden del sistema como pendiente si hay cliente
         if ($idCustomer) {
             $stmt2 = $this->db->prepare("
                 UPDATE system_orders
@@ -507,17 +523,57 @@ class Order
         }
 
         return true;
+
     } catch (PDOException $e) {
         error_log("❌ Error SQL en saveCustomerOrderAndMarkPending(): " . $e->getMessage());
         throw new Exception("Error SQL: " . $e->getMessage());
     }
 }
 
+
 public function getSupplierOrderTypes()
 {
     $stmt = $this->db->query("SELECT id, order_type FROM supplier_order_types ORDER BY id ASC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+public function setCustomerOrderPdf(int $systemOrderId, string $path, string $originalName): bool
+{
+    try {
+        // 📄 Buscar el pedido del cliente correspondiente a esta orden del sistema
+        $stmt = $this->db->prepare("
+            SELECT id 
+            FROM customer_orders 
+            WHERE id_system_order = :systemOrderId 
+            LIMIT 1
+        ");
+        $stmt->execute([':systemOrderId' => $systemOrderId]);
+        $customerOrderId = $stmt->fetchColumn();
+
+        if (!$customerOrderId) {
+            throw new Exception("No se encontró el pedido cliente asociado a la orden del sistema #$systemOrderId.");
+        }
+
+        // 💾 Guardar ruta, nombre original y fecha de subida
+        $stmt = $this->db->prepare("
+            UPDATE customer_orders
+            SET order_pdf_path = :path,
+                order_pdf_original = :original,
+                order_pdf_uploaded_at = NOW()
+            WHERE id = :id
+        ");
+
+        return $stmt->execute([
+            ':path'     => $path,
+            ':original' => $originalName,
+            ':id'       => $customerOrderId
+        ]);
+    } catch (PDOException $e) {
+        error_log('Error al guardar PDF: ' . $e->getMessage());
+        return false;
+    }
+}
+
 
 public function getConnection()
 {
