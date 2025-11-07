@@ -214,81 +214,32 @@ return [
         'public' => false
     ],
 
-    // MAIN LOGISTIC
-    'main_logistic' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'index',
-        'public' => false
-    ],
-    'api_fetch_data' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_fetch_data',
-        'public' => false
-    ],
-    'api_list_drivers' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_list_drivers',
-        'public' => false
-    ],
-    // 👥 NUEVO ENDPOINT: Listado de todos los usuarios (para eventos manuales)
-    'api_list_all_users' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_list_all_users',
-        'public' => false
-    ],
-    'api_create_route' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_create_route',
-        'public' => false
-    ],
-    'api_assign_to_route' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_assign_to_route',
-        'public' => false
-    ],
-    'api_assign_trip_driver' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_assign_trip_driver',
-        'public' => false
-    ],
-    'api_register_manual_event' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_register_manual_event',
-        'public' => false
-    ],
-    'api_assign_bulk' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'api_assign_bulk',
-        'public' => false
-    ],
-
-    // ==========================================================
-    // RUTAS DEL MÓDULO LOGÍSTICO (PANEL FACTURISTA)
-    // ==========================================================
+    // ======================
+    // LOGÍSTICA (nuevo)
+    // ======================
     'logistic_pickups' => [
-        'controller' => 'LogisticPickupsController',
-        'method'     => 'index',
-        'public'     => false
+        'controller' => 'LogisticController',
+        'method' => 'pickups',
+        'public' => false
     ],
 
-    'api_logistic_initialize' => [
-        'controller' => 'LogisticInitController',
-        'method'     => 'initialize',
-        'public'     => false
+    'api_logistic_fetch_wholesaler' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'apiFetchWholesaler',
+        'public' => false
     ],
 
-    'api_list_supplier_orders' => [
-        'controller' => 'LogisticPickupsController',
-        'method'     => 'api_list_supplier_orders',
-        'public'     => false
+    'api_logistic_assign_bulk' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'apiAssignBulk',
+        'public' => false
     ],
 
-    'api_list_logistic_items' => [
-        'controller' => 'LogisticPickupsController',
-        'method'     => 'api_list_logistic_items',
-        'public'     => false
+    'api_logistic_register_event' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'apiRegisterEvent',
+        'public' => false
     ],
-
 
 
 
