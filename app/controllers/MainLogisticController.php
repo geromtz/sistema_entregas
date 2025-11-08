@@ -1,37 +1,30 @@
 <?php
-
 class MainLogisticController
 {
-    public function apiFetchWholesaler()
+    public function apiFetchPickups()
     {
         AuthMiddleware::checkDepartment([4]);
         require_once __DIR__ . '/../models/Logistic.php';
         $model = new Logistic();
-
-        $data = $model->getWholesalerPending();
-        header('Content-Type: application/json');
-        echo json_encode(['data' => $data]);
+        $data = $model->getPickupOrdersGrouped();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'data' => $data]);
     }
 
-    public function apiAssignBulk()
+    public function apiUpdatePickupStatus()
     {
         AuthMiddleware::checkDepartment([4]);
         require_once __DIR__ . '/../models/Logistic.php';
         $payload = json_decode(file_get_contents('php://input'), true);
-
-        if (!$payload || empty($payload['items']) || empty($payload['assigned_to'])) {
+        $orderId = (int)($payload['supplier_order_id'] ?? 0);
+        $newStatus = (int)($payload['id_status'] ?? 0);
+        if ($orderId <= 0 || $newStatus <= 0) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Parámetros inválidos']);
+            echo json_encode(['success' => false]);
             return;
         }
-
         $model = new Logistic();
-        $ok = $model->assignBulk(
-            $payload['items'],                 // [{tracking_id, type, scheduled_date}, ...]
-            (int)$payload['assigned_to'],
-            $payload['notes'] ?? ''
-        );
-
+        $ok = $model->updatePickupStatus($orderId, $newStatus);
         header('Content-Type: application/json');
         echo json_encode(['success' => $ok]);
     }
@@ -41,20 +34,16 @@ class MainLogisticController
         AuthMiddleware::checkDepartment([4]);
         require_once __DIR__ . '/../models/Logistic.php';
         $payload = json_decode(file_get_contents('php://input'), true);
-
-        if (!$payload || empty($payload['tracking_id']) || empty($payload['status'])) {
+        $orderId = (int)($payload['supplier_order_id'] ?? 0);
+        $notes = trim($payload['notes'] ?? '');
+        $userId = $_SESSION['user']['id'] ?? null;
+        if ($orderId <= 0 || empty($notes)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Parámetros inválidos']);
+            echo json_encode(['success' => false]);
             return;
         }
-
         $model = new Logistic();
-        $ok = $model->registerManualEvent(
-            (int)$payload['tracking_id'],
-            $payload['status'],
-            $payload['notes'] ?? ''
-        );
-
+        $ok = $model->registerManualEvent($orderId, $notes, $userId);
         header('Content-Type: application/json');
         echo json_encode(['success' => $ok]);
     }

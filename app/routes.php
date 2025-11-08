@@ -214,9 +214,10 @@ return [
         'public' => false
     ],
 
-    // ======================
-    // LOGÍSTICA (nuevo)
-    // ======================
+    // ==========================================================
+    // LOGÍSTICA (RECOLECCIONES)
+    // ==========================================================
+
     'logistic_pickups' => [
         'controller' => 'LogisticController',
         'method' => 'pickups',
