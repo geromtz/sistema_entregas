@@ -112,6 +112,13 @@ class SupplierOrdersController
             }
 
             // ==========================================================
+            // 🚀 NUEVO: DISPARAR LOGÍSTICA AUTOMÁTICA
+            // ==========================================================
+            require_once __DIR__ . '/../models/LogisticModel.php';
+            $logisticModel = new LogisticModel();
+            $logisticModel->createFromFullOrder($supplierOrderId);
+
+            // ==========================================================
             // 🔄 Recalcular estado del pedido proveedor y propagar
             // ==========================================================
             $statusManager->updateSupplierOrderStatus($supplierOrderId);

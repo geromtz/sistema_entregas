@@ -392,5 +392,6 @@
 <script src="public/assets/js/create_order/supplier_order_viewer.js"></script>
 <script src="public/assets/js/create_order/customer_autocomplete.js"></script>
 <script src="public/assets/js/create_order/order_status_manager.js"></script>
+<script src="public/assets/js/utils/utils.js"></script>
 <script src="public/assets/js/create_order/supplier_autocomplete.js"></script>
 <script src="public/assets/js/create_order/branch_autocomplete.js"></script>

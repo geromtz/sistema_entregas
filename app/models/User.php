@@ -10,30 +10,32 @@ class User {
     }
 
     // Validar login
-    public function validateUser($username, $password) {
-        try {
-            $md5pass = md5($password);
-            $stmt = $this->db->prepare("
-                SELECT u.id, u.user, u.firstname, u.apellidos, u.email,
-                       u.id_position, u.pass, p.department_id
-                FROM users u
-                LEFT JOIN positions p ON u.id_position = p.id
-                WHERE u.user = :user AND u.pass = :pass
-                LIMIT 1
-            ");
-            $stmt->execute([
-                ':user' => $username,
-                ':pass' => $md5pass
-            ]);
-            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$userData) return false;
-            unset($userData['pass']);
-            return $userData;
-        } catch (PDOException $e) {
-            error_log("Error validating user: " . $e->getMessage());
-            return false;
-        }
+   public function validateUser($username, $password) {
+    try {
+        $md5pass = md5($password);
+        $stmt = $this->db->prepare("
+            SELECT u.id, u.user, u.firstname, u.apellidos, u.email,
+                   u.id_position, u.pass, u.is_leader, p.department_id  -- <-- Agregado u.is_leader
+            FROM users u
+            LEFT JOIN positions p ON u.id_position = p.id
+            WHERE u.user = :user AND u.pass = :pass
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':user' => $username,
+            ':pass' => $md5pass
+        ]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$userData) return false;
+        
+        unset($userData['pass']);
+        return $userData;
+    } catch (PDOException $e) {
+        error_log("Error validating user: " . $e->getMessage());
+        return false;
     }
+}
 
     // Obtener IDs de usuario según jerarquía
     public function getTeamUserIds(int $userId): array {

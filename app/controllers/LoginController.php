@@ -28,6 +28,7 @@ class LoginController {
                     'fullname' => $user['firstname'] . ' ' . $user['apellidos'],
                     'email' => $user['email'],
                     'id_position' => $user['id_position'],
+                    'is_leader'     => $user['is_leader'],
                     'department_id' => $user['department_id'] ?? null
                 ];
 

@@ -215,33 +215,56 @@ return [
     ],
 
     // ==========================================================
-    // LOGÍSTICA (RECOLECCIONES)
+    // LOGÍSTICA
     // ==========================================================
 
-    'logistic_pickups' => [
+    'my_pickups' => [
         'controller' => 'LogisticController',
-        'method' => 'pickups',
+        'method' => 'myPickups',
         'public' => false
     ],
 
-    'api_logistic_fetch_wholesaler' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'apiFetchWholesaler',
+    'my_deliverys' => [
+        'controller' => 'LogisticController',
+        'method' => 'myDeliverys',
         'public' => false
     ],
 
-    'api_logistic_assign_bulk' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'apiAssignBulk',
+    'mark_pickup' => [
+        'controller' => 'LogisticController',
+        'method' => 'markPickup',
         'public' => false
     ],
 
-    'api_logistic_register_event' => [
-        'controller' => 'MainLogisticController',
-        'method' => 'apiRegisterEvent',
+    'mark_delivery' => [
+        'controller' => 'LogisticController',
+        'method' => 'markDelivery',
         'public' => false
     ],
 
+    'main_logistic' => [
+        'controller' => 'LogisticController',
+        'method' => 'mainLogistic',
+        'public' => false
+    ],
+
+    'save_incident_ajax' => [
+        'controller' => 'LogisticController',
+        'method' => 'saveIncidentAjax',
+        'public' => false
+    ],
+
+    'assign_driver' => [
+        'controller' => 'LogisticController',
+        'method' => 'assignDriver', // Este es el método que creamos en el controlador
+        'public' => false
+    ],
+
+    'unassign_driver' => [
+        'controller' => 'LogisticController',
+        'method' => 'unassignDriver',
+        'public' => false
+    ],
 
 
 

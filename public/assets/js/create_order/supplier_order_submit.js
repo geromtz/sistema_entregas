@@ -19,10 +19,21 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ===========================================================
-   🔔 Alertas mínimas (reemplazables por tu sistema de UI)
-  =========================================================== */
+   🔔 Alertas Visuales (Conectadas con alertContainer)
+   =========================================================== */
   const showToast = (msg, type = "info") => {
-    console.log(`[${type.toUpperCase()}] ${msg}`);
+    // Si utils.js está cargado, usamos la alerta visual
+    if (window.showAlert) {
+      // Mapeamos 'warning' o 'info' al formato de tu showAlert
+      window.showAlert(
+        msg,
+        type === "warning" ? "warning" : type === "error" ? "error" : "success",
+      );
+    } else {
+      // Fallback por si utils.js falla
+      console.log(`[${type.toUpperCase()}] ${msg}`);
+      alert(msg);
+    }
   };
 
   /* ===========================================================
@@ -56,9 +67,35 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const tiposConFechaObligatoria = [2, 3, 4, 5];
+
+    if (tiposConFechaObligatoria.includes(tipoNum)) {
+      // Buscamos todos los inputs de fecha dentro del formulario activo
+      const dateInputs = activeForm.querySelectorAll('input[type="date"]');
+      let fechasIncompletas = false;
+
+      dateInputs.forEach((input) => {
+        // Si el input está vacío o tiene el valor por defecto
+        if (!input.value || input.value === "0000-00-00") {
+          fechasIncompletas = true;
+          input.classList.add("is-invalid"); // Opcional: marca el error visualmente
+        } else {
+          input.classList.remove("is-invalid");
+        }
+      });
+
+      if (fechasIncompletas) {
+        showToast(
+          "Favor de insertar fecha de arribo (o un aproximado) para continuar.",
+          "warning",
+        );
+        return;
+      }
+    }
+
     // Regla: exigir proveedor salvo Local(1) y Varias Sucursales(4)
-    if (![1, 4].includes(tipoNum) && !supplierId) {
-      showToast("Selecciona un proveedor.", "warning");
+    if (tipoNum !== 1 && !supplierId) {
+      showToast("Por favor, ingrese un proveedor para continuar.", "warning");
       return;
     }
 
@@ -75,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fd = new FormData(activeForm);
     } else {
       console.warn(
-        "⚠️ activeForm NO es un <form> (es un " + activeForm?.tagName + ")"
+        "⚠️ activeForm NO es un <form> (es un " + activeForm?.tagName + ")",
       );
       fd = new FormData();
       // Recolectar todos los campos dentro del contenedor visible

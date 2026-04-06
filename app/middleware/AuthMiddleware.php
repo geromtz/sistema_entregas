@@ -3,10 +3,7 @@
 
 class AuthMiddleware {
 
-    /**
-     * Verifica si el usuario está logueado.
-     * Redirige al login si no lo está.
-     */
+  
     public static function checkLogin() {
         if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -16,10 +13,8 @@ class AuthMiddleware {
         }
     }
 
-    /**
-     * Verifica si el usuario tiene un rol/permiso específico
-     * Ejemplo: departamentos permitidos
-     */
+
+
     public static function checkDepartment(array $allowedDepartments) {
         if (session_status() === PHP_SESSION_NONE) session_start();
 
