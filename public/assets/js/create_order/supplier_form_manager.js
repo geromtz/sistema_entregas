@@ -62,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
     supplierTemplate?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-<<<<<<< HEAD
 // Cambiar tipo de pedido → mostrar subform con validación de Mayorista
   tipoPedidoSelect?.addEventListener("change", (e) => {
     const supplierId = document.getElementById("supplier_id")?.value;
@@ -78,14 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     hideAllForms();
-=======
-  // Cambiar tipo de pedido → mostrar subform
-  tipoPedidoSelect?.addEventListener("change", (e) => {
-    
-
-    hideAllForms();
-    const val = String(e.target.value || "");
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
     switch (val) {
       case "1": showForm("form-local"); break;
       case "2": showForm("form-foraneo-oficina"); break;
@@ -139,11 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", (e) => {
     // ➕ Agregar fila
     if (e.target.classList.contains("add-row-btn")) {
-<<<<<<< HEAD
       const targetId = e.target.dataset.target; 
-=======
-      const targetId = e.target.dataset.target; // debe coincidir con el id del contenedor .card
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
       const formCard = document.getElementById(targetId);
       const tbody = formCard?.querySelector("tbody");
       if (!tbody) return;
@@ -152,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const newIndex = rows.length;
       const newRow = rows[0].cloneNode(true);
 
-<<<<<<< HEAD
       // Limpiar inputs de la fila clonada
       // Limpiar inputs de la fila clonada
       newRow.querySelectorAll("input").forEach((input) => {
@@ -180,13 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
         delete branchSearchInput.dataset.branchInitialized;
       }
 
-=======
-      newRow.querySelectorAll("input").forEach((input) => {
-        if (input.type === "checkbox") input.checked = false;
-        else input.value = "";
-        input.name = input.name.replace(/\[items]\[\d+]/, `[items][${newIndex}]`);
-      });
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
       // renumerar columna "#"
       const numCell = newRow.querySelector("td:nth-child(2)");
       if (numCell) numCell.textContent = newIndex + 1;
@@ -268,7 +247,6 @@ async function loadSupplierOrderTypes() {
   select.value = "0"; // valor inicial
 }
 
-<<<<<<< HEAD
 
 
 // Checkbox maestro para "Recoger en Sucursal" dentro de Varias Sucursales
@@ -280,8 +258,6 @@ document.addEventListener('change', function(e) {
     }
 });
 
-=======
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 /* ===========================================================
  🧩 FALLBACK LOCAL (por si falla el fetch)
 =========================================================== */
