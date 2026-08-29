@@ -1,0 +1,36 @@
+Array
+(
+    [varias_sucursales] => Array
+        (
+            [items] => Array
+                (
+                    [0] => Array
+                        (
+                            [quantity] => 1
+                            [product] => 920-004428 - KIT TECLADO Y MOUSE LOGITECH MK120 USB N
+                            [product_id] => 1787
+                            [origin_branch] => PUEBLA
+                            [pickup_at_branch] => 1
+                            [eta] => 2026-09-01
+                        )
+
+                    [1] => Array
+                        (
+                            [quantity] => 3
+                            [product] => 920-004428 - KIT TECLADO Y MOUSE LOGITECH MK120 USB N
+                            [product_id] => 1787
+                            [origin_branch] => TORREON
+                            [pickup_at_branch] => 1
+                            [eta] => 2026-09-01
+                        )
+
+                )
+
+        )
+
+    [customer_order_id] => 200
+    [mayorista] => 1
+    [id_branch] => 1
+    [id_order] => SYS-456
+    [id_type_order] => 4
+)
