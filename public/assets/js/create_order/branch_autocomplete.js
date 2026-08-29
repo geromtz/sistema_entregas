@@ -6,7 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let timer;
         let activeIndex = -1;
         const MIN = 1;
+<<<<<<< HEAD
         let currentBranches = [];
+=======
+        let currentBranches = []; // Espejo en memoria para validación instantánea
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
         const clearList = () => {
             listEl.innerHTML = "";
@@ -21,6 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         };
 
+<<<<<<< HEAD
+=======
+        // --- 🔍 BUSCAR SUCURSALES (INPUT) ---
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         inputEl.addEventListener("input", () => {
             const term = inputEl.value.trim();
             hiddenEl.value = "";
@@ -39,7 +47,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         `index.php?page=supplier_branches_list&id_supplier=${supplierId}&term=${encodeURIComponent(term)}`
                     );
                     const data = await res.json();
+<<<<<<< HEAD
                     currentBranches = (data.success && Array.isArray(data.data)) ? data.data : [];
+=======
+
+                    // Actualizamos el espejo en memoria
+                    currentBranches = (data.success && Array.isArray(data.data)) ? data.data : [];
+
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                     clearList();
 
                     if (currentBranches.length > 0) {
@@ -54,6 +69,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 inputEl.value = b.branch;
                                 hiddenEl.value = b.id;
                                 clearList();
+<<<<<<< HEAD
+=======
+                                // Al click, saltamos al siguiente campo lógico
+                                document.getElementsByName("id_order")[0]?.focus();
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                             });
                             listEl.appendChild(btn);
                         });
@@ -65,6 +85,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 250);
         });
 
+<<<<<<< HEAD
+=======
+        // --- ⌨️ NAVEGACIÓN Y VALIDACIÓN (KEYDOWN) ---
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         inputEl.addEventListener("keydown", async (e) => {
             const items = listEl.querySelectorAll(".list-group-item");
             const total = items.length;
@@ -77,21 +101,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 activeIndex = (activeIndex + 1) % total;
                 highlightItem(activeIndex);
             } else if (e.key === "ArrowUp") {
+<<<<<<< HEAD
                 activeIndex = (activeIndex - 1 + total) % total;
                 highlightItem(activeIndex);
             } else if (e.key === "Enter" || e.key === "Tab") {
+=======
+                activeIndex = (activeIndex - 1 + total) % total; // Corregido: antes tenías un menos doble
+                highlightItem(activeIndex);
+            } else if (e.key === "Enter" || e.key === "Tab") {
+
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                 const branchName = inputEl.value.trim();
                 const supplierId = supplierIdEl.value;
                 if (branchName.length < 1) return;
 
+<<<<<<< HEAD
+=======
+                // 1️⃣ CASO: Selección manual con flechas
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                 if (activeIndex >= 0 && activeIndex < total) {
                     const selected = items[activeIndex];
                     inputEl.value = selected.textContent;
                     hiddenEl.value = selected.dataset.id;
                     clearList();
+<<<<<<< HEAD
                     return;
                 }
 
+=======
+                    document.getElementsByName("id_order")[0]?.focus();
+                    return;
+                }
+
+                // 2️⃣ CASO: VALIDACIÓN INSTANTÁNEA (Espejo)
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                 const exactMatch = currentBranches.find(b =>
                     (b.branch || "").toLowerCase() === branchName.toLowerCase()
                 );
@@ -100,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     hiddenEl.value = exactMatch.id;
                     inputEl.value = exactMatch.branch;
                     clearList();
+<<<<<<< HEAD
                     return;
                 }
 
@@ -107,6 +151,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!supplierId) {
                         e.preventDefault();
                         window.showAlert?.("⚠️ Selecciona primero un proveedor.", "warning") || alert("Selecciona primero un proveedor.");
+=======
+                    if (e.key === "Enter") document.getElementsByName("id_order")[0]?.focus();
+                    return;
+                }
+
+                // 3️⃣ CASO: CREACIÓN
+                if (!hiddenEl.value && branchName.length >= MIN) {
+                    if (!supplierId) {
+                        e.preventDefault();
+                        window.showAlert("⚠️ Selecciona primero un proveedor.", "warning");
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                         document.getElementById("supplier")?.focus();
                         return;
                     }
@@ -126,21 +181,41 @@ document.addEventListener("DOMContentLoaded", () => {
                             const data = await res.json();
                             if (data.success && data.id) {
                                 hiddenEl.value = data.id;
+<<<<<<< HEAD
                                 window.showAlert?.(`Sucursal "${branchName}" creada.`, "success");
                             } else {
                                 alert(`⚠️ ${data.message || "Error al crear."}`);
                             }
                         } catch (err) {
                             alert("Error de conexión.");
+=======
+                                window.showAlert(`Sucursal "${branchName}" creada.`, "success");
+                                document.getElementsByName("id_order")[0]?.focus();
+                            } else {
+                                window.showAlert(`⚠️ ${data.message || "Error al crear."}`, "error");
+                            }
+                        } catch (err) {
+                            window.showAlert("Error de conexión.", "error");
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                         }
                     } else {
                         inputEl.value = "";
                         hiddenEl.value = "";
+<<<<<<< HEAD
+=======
+                        inputEl.focus();
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                     }
                 }
             }
         });
 
+<<<<<<< HEAD
+=======
+        /**
+         * Lógica del Modal (Consistente con Supplier)
+         */
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         function confirmWithModal(name) {
             return new Promise((resolve) => {
                 const modalEl = document.getElementById('confirmCreateModal');
@@ -164,11 +239,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+<<<<<<< HEAD
+=======
+        // Cerrar lista si clic fuera
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         document.addEventListener("click", (ev) => {
             if (!listEl.contains(ev.target) && ev.target !== inputEl) clearList();
         });
     };
 
+<<<<<<< HEAD
     // 🔄 Inicializador global para la sucursal principal y las filas dinámicas de Varias Sucursales
     const initAllBranches = () => {
         const supplierHidden = document.getElementById("supplier_id");
@@ -208,4 +288,15 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(initAllBranches, 100);
         }
     });
+=======
+    // Inicialización automática
+    const inputBranch = document.getElementById("branch");
+    const hiddenBranch = document.getElementById("branch_id");
+    const listBranch = document.getElementById("branch-list");
+    const supplierHidden = document.getElementById("supplier_id");
+
+    if (inputBranch && hiddenBranch && listBranch && supplierHidden) {
+        window.initBranchAutocomplete(inputBranch, hiddenBranch, listBranch, supplierHidden);
+    }
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 });

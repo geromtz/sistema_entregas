@@ -98,6 +98,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+<<<<<<< HEAD
 
   /* Permitir que la lista flotante sobresalga de la tabla y tarjetas */
   .table-responsive {
@@ -107,6 +108,8 @@
   .card {
     overflow: visible !important;
   }
+=======
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 </style>
 
 <div class="container mt-5">
@@ -403,5 +406,9 @@
 <script src="public/assets/js/create_order/order_status_manager.js"></script>
 <script src="public/assets/js/utils/utils.js"></script>
 <script src="public/assets/js/create_order/supplier_autocomplete.js"></script>
+<<<<<<< HEAD
 <script src="public/assets/js/create_order/branch_autocomplete.js"></script>
 <script src="public/assets/js/create_order/product_autocomplete.js"></script>
+=======
+<script src="public/assets/js/create_order/branch_autocomplete.js"></script>
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547

@@ -178,10 +178,13 @@
                 </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
                 <?php
                 // Silenciamos la alerta del editor asegurando que $data exista
                 $data = $data ?? [];
                 ?>
+=======
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                 <?php foreach ($data as $row): ?>
                     <?php
                     if ($row['delivery_status'] == 1) {
@@ -204,6 +207,7 @@
                         <td class="text-center text-nowrap"><?= $row['pickup_date'] ? date('d/m/y H:i', strtotime($row['pickup_date'])) : '-' ?></td>
                         <td style="white-space:normal; min-width:250px;">
                             <div class="d-flex align-items-center justify-content-between">
+<<<<<<< HEAD
                                 <span>
                                     <?php
                                     if (!empty($row['part_number']) && !empty($row['articulos'])) {
@@ -213,6 +217,9 @@
                                     }
                                     ?>
                                 </span>
+=======
+                                <span><?= $row['articulos'] ?></span>
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
                                 <?php if (!empty($row['incident_history'])): ?>
                                     <button type="button"
@@ -234,7 +241,11 @@
                                 <span class="fw-bold text-dark"><?= htmlspecialchars($row['cliente_name']) ?></span>
 
                                 <a href="#" class="text-decoration-none small text-primary fw-bold">
+<<<<<<< HEAD
                                     (PO<?= htmlspecialchars($row['purchase_order'] ?? '') ?>)
+=======
+                                    (PO<?= htmlspecialchars($row['purchase_order']) ?>)
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                                 </a>
                             </div>
                         </td>

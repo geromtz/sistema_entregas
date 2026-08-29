@@ -34,6 +34,7 @@ class LogisticModel
      * Obtener recolecciones pendientes
      */
     public function getPendingPickups($userId, $isLeader)
+<<<<<<< HEAD
     {
         try {
             date_default_timezone_set('America/Monterrey');
@@ -107,6 +108,82 @@ class LogisticModel
         }
     }
 
+=======
+{
+    try {
+        date_default_timezone_set('America/Monterrey');
+        $hoy = date('Y-m-d');
+
+        // Definimos si es admin (Líder o Temo con ID 6)
+        $esAdmin = ($isLeader || $userId == 6);
+
+        $query = "SELECT 
+            i.id AS item_id, 
+            i.description_product, 
+            i.quantity,
+            COALESCE(s.supplier_order, 'S/F') as system_number,
+            COALESCE(cust.business_name, co.name_order, 'Stock / General') as name_order,
+            p.business_name as supplier_name,
+            s.id_order_type,
+            COALESCE(st.order_type, 'Normal') AS type_name,
+            CONCAT(u_drv.firstname, ' ', u_drv.apellidos) as assigned_driver_name,
+            CASE 
+                WHEN s.id_order_type IN (1, 2) THEN 'Producto Local'
+                ELSE COALESCE(DATE_FORMAT(t.arrival_date, '%d/%m/%Y'), 'Sin fecha')
+            END AS arrival_info,
+            CASE 
+                WHEN s.id_order_type IN (3, 4, 5) THEN COALESCE(t.origin_branch, 'Pendiente')
+                ELSE COALESCE(ad_order.branch, 'Matriz')
+            END AS pickup_location,
+            (SELECT GROUP_CONCAT(
+                CONCAT('• ', li.comment, ' - ', u.firstname, ' ', u.apellidos, ' (', DATE_FORMAT(li.created_at, '%d/%m/%Y'), ')') 
+                ORDER BY li.created_at DESC SEPARATOR '<br>') 
+             FROM logistic_incidents li 
+             INNER JOIN users u ON li.created_by = u.id
+             WHERE li.id_logistic_status = l.id) as incident_history
+        FROM items_supplier_order i
+        INNER JOIN supplier_orders s ON i.id_supplier_order = s.id
+        INNER JOIN suppliers p ON s.id_supplier = p.id
+        LEFT JOIN customer_orders co ON s.id_customer_order = co.id
+        LEFT JOIN customers cust ON co.id_customer = cust.id
+        LEFT JOIN supplier_order_types st ON st.id = s.id_order_type
+        LEFT JOIN supplier_adress ad_order ON s.id_branch = ad_order.id
+        LEFT JOIN tracking_supplier_orders t ON t.id_item_supplier_order = i.id
+        LEFT JOIN logistic_status l ON l.id_item_supplier_order = i.id
+        LEFT JOIN users u_drv ON l.assigned_to = u_drv.id
+        
+        WHERE (l.pickup_status IS NULL OR l.pickup_status = 0)
+        
+        -- FILTRO DE ASIGNACIÓN CORREGIDO:
+        -- Si es admin, ve todo (l.assigned_to = :userId OR 1=1).
+        -- Si es chofer, solo ve lo que tiene su ID asignado.
+        AND (
+            " . ($esAdmin ? "1=1" : "l.assigned_to = :userId") . "
+        )
+
+        AND (
+            s.id_order_type IN (1, 2)
+            OR 
+            (s.id_order_type IN (3, 4, 5) AND (t.arrival_date IS NULL OR DATE(t.arrival_date) <= :hoy))
+            OR (" . ($esAdmin ? "1=1" : "0=1") . ") 
+        )
+        ORDER BY i.id DESC";
+
+        $stmt = $this->db->prepare($query);
+        $params = ['hoy' => $hoy];
+
+        if (!$esAdmin) {
+            $params['userId'] = $userId;
+        }
+
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error en getPendingPickups: " . $e->getMessage());
+        return [];
+    }
+}
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
     /**
      * Obtener entregas pendientes
      */
@@ -118,7 +195,11 @@ class LogisticModel
                     so.system_number,
                     c.name_order,
                     i.id AS item_id,
+<<<<<<< HEAD
                     CONCAT(p_prod.part_number, ' - ', p_prod.description) AS description_product,
+=======
+                    i.description_product,
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                     i.quantity,
                     l.pickup_status,
                     l.delivery_status
@@ -131,8 +212,11 @@ class LogisticModel
                     ON so.id = c.id_system_order
                 JOIN logistic_status l 
                     ON l.id_item_supplier_order = i.id
+<<<<<<< HEAD
                 LEFT JOIN products p_prod 
                     ON i.product_id = p_prod.id
+=======
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                 WHERE l.pickup_status = 1
                 AND l.delivery_status = 0
                 ORDER BY so.system_number DESC
@@ -207,16 +291,22 @@ class LogisticModel
             prov.business_name AS proveedor_name,
             st.order_type AS tipo_pedido_nombre,
             cust.business_name AS cliente_name,
+<<<<<<< HEAD
             c.purchase_order,
             CONCAT(u3.firstname, ' ', u3.apellidos) AS vendedor_name,
             p_prod.part_number AS part_number,
             p_prod.description AS articulos,
+=======
+            CONCAT(u3.firstname, ' ', u3.apellidos) AS vendedor_name,
+            i.description_product AS articulos,
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
             l.pickup_status,
             l.pickup_date,
             l.delivery_status,
             l.delivery_date,
             CONCAT(u1.firstname, ' ', u1.apellidos) AS pickup_user,
             CONCAT(u2.firstname, ' ', u2.apellidos) AS delivery_user,
+<<<<<<< HEAD
             (SELECT GROUP_CONCAT(
                 CONCAT('• ', li.comment, ' - ', u.firstname, ' ', u.apellidos, ' (', DATE_FORMAT(li.created_at, '%d/%m/%Y'), ')') 
                 ORDER BY li.created_at DESC SEPARATOR '<br>') 
@@ -227,6 +317,18 @@ class LogisticModel
         FROM logistic_status l
         INNER JOIN items_supplier_order i ON i.id = l.id_item_supplier_order
         LEFT JOIN products p_prod ON i.product_id = p_prod.id
+=======
+            -- HISTORIAL DETALLADO PARA MONITOR
+            (SELECT GROUP_CONCAT(
+                CONCAT('• ', li.comment, ' - ', u.firstname, ' ', u.apellidos, ' (', DATE_FORMAT(li.created_at, '%d/%m/%Y'), ')') 
+                ORDER BY li.created_at DESC SEPARATOR '<br>') 
+             FROM logistic_incidents li 
+             INNER JOIN users u ON li.created_by = u.id
+             WHERE li.id_logistic_status = l.id) as incident_history
+            
+        FROM logistic_status l
+        INNER JOIN items_supplier_order i ON i.id = l.id_item_supplier_order
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         INNER JOIN supplier_orders sup ON sup.id = i.id_supplier_order
         INNER JOIN suppliers prov ON prov.id = sup.id_supplier
         INNER JOIN supplier_order_types st ON st.id = sup.id_order_type
@@ -306,6 +408,10 @@ class LogisticModel
         if ($row) {
             return $row['id'];
         } else {
+<<<<<<< HEAD
+=======
+            // Creamos el registro con pickup_status en 0 (Pendiente)
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
             $stmt = $this->db->prepare("INSERT INTO logistic_status (id_item_supplier_order, pickup_status, created_at) VALUES (?, 0, NOW())");
             $stmt->execute([$itemId]);
             return $this->db->lastInsertId();
@@ -323,6 +429,11 @@ class LogisticModel
 
         $stmt = $this->db->prepare($sql);
 
+<<<<<<< HEAD
+=======
+        // El orden es crítico: 
+        // 1: ID Status, 2: Tipo (pickup/delivery), 3: Comentario, 4: ID Usuario
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
         return $stmt->execute([
             $statusId,
             $type,
@@ -333,10 +444,18 @@ class LogisticModel
 
     /**
      * Obtiene la lista de usuarios para asignar recolecciones.
+<<<<<<< HEAD
+=======
+     * Filtra por roles de logística o permite otros si es necesario.
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
      */
     public function getAvailableDrivers()
     {
         try {
+<<<<<<< HEAD
+=======
+            // Traemos id, nombres y el puesto (id_position)
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
             $query = "SELECT id, firstname, apellidos, id_position FROM users ORDER BY firstname ASC";
             $stmt = $this->db->prepare($query);
             $stmt->execute();
@@ -350,6 +469,7 @@ class LogisticModel
     {
         try {
             $statusId = $this->getOrCreateStatus($itemId);
+<<<<<<< HEAD
             $adminId  = $_SESSION['user']['id'] ?? null;
 
             $query = "UPDATE logistic_status 
@@ -358,6 +478,16 @@ class LogisticModel
                          assigned_by = :adminId,
                          updated_at = NOW() 
                      WHERE id = :statusId";
+=======
+            $adminId  = $_SESSION['user']['id'] ?? null; // Quién está asignando
+
+            $query = "UPDATE logistic_status 
+                  SET assigned_to = :driverId, 
+                      assigned_at = NOW(), 
+                      assigned_by = :adminId,
+                      updated_at = NOW() 
+                  WHERE id = :statusId";
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
             $stmt = $this->db->prepare($query);
             return $stmt->execute([
@@ -371,6 +501,7 @@ class LogisticModel
     }
 
     public function removeAssignment($itemId)
+<<<<<<< HEAD
     {
         try {
             $statusId = $this->getOrCreateStatus($itemId);
@@ -390,3 +521,27 @@ class LogisticModel
         }
     }
 }
+=======
+{
+    try {
+        // Usamos tu método existente para obtener el ID de la tabla de estatus
+        $statusId = $this->getOrCreateStatus($itemId);
+
+        $query = "UPDATE logistic_status 
+                  SET assigned_to = NULL, 
+                      assigned_at = NULL, 
+                      assigned_by = NULL,
+                      updated_at = NOW() 
+                  WHERE id = :statusId";
+
+        $stmt = $this->db->prepare($query);
+        return $stmt->execute(['statusId' => $statusId]);
+    } catch (PDOException $e) {
+        error_log("Error unassigning: " . $e->getMessage());
+        return false;
+    }
+}
+
+    
+}
+>>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
