@@ -88,7 +88,6 @@ class SupplierItemsController extends AppController
     exit;
 }
 
-<<<<<<< HEAD
 
 /**
      * Devuelve una lista de productos en JSON para autocompletar en los pedidos.
@@ -122,6 +121,4 @@ class SupplierItemsController extends AppController
         exit;
     }
 
-=======
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 }

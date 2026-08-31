@@ -57,15 +57,9 @@ class SupplierOrdersController
             foreach (['local', 'foraneo_oficina', 'foraneo_usuario_final', 'foraneo_sucursal', 'varias_sucursales'] as $grupo) {
                 if (!empty($_POST[$grupo]['items']) && is_array($_POST[$grupo]['items'])) {
 
-<<<<<<< HEAD
                     // ⚠️ Ignorar grupos con productos vacíos (validando que venga el product_id)
                     $items = array_filter($_POST[$grupo]['items'], function ($i) {
                         return !empty(trim($i['product_id'] ?? ''));
-=======
-                    // ⚠️ Ignorar grupos con productos vacíos
-                    $items = array_filter($_POST[$grupo]['items'], function ($i) {
-                        return !empty(trim($i['product'] ?? ''));
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                     });
 
                     if (count($items) > 0) {
@@ -85,23 +79,16 @@ class SupplierOrdersController
 
                     $nextItemNumber = $itemModel->getNextItemNumber($supplierOrderId);
 
-<<<<<<< HEAD
                     // 🟢 Capturamos si el check de recolección en sucursal viene marcado (1 o 0)
                     $pickupAtBranch = isset($item['pickup_at_branch']) ? 1 : 0;
 
-=======
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                     $itemModel->createSupplierItem([
                         'id_status'           => 1,
                         'id_supplier_order'   => $supplierOrderId,
                         'quantity'            => $item['quantity'] ?? 0,
                         'item_number'         => $nextItemNumber,
-<<<<<<< HEAD
                         'product_id'          => $item['product_id'] ?? null,
                         'pickup_at_branch'    => $pickupAtBranch, // 👈 Se lo pasamos al modelo
-=======
-                        'description_product' => $item['product'] ?? '',
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                         'created_by'          => $userId,
                     ]);
 
@@ -119,11 +106,7 @@ class SupplierOrdersController
                             'id_item_supplier_order' => $itemId,
                             'tracking_number' => $item['guide_number'] ?? null,
                             'tracking_company' => $item['courier'] ?? null,
-<<<<<<< HEAD
                             'origin_branch' => $item['origin_branch_id'] ?? $item['origin_branch'] ?? null, // 👈 Asegurar que reciba el ID de la sucursal seleccionada o creada
-=======
-                            'origin_branch' => $item['origin_branch'] ?? null,
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
                             'arrival_date' => $item['eta'] ?? null,
                         ]);
                     }
@@ -132,9 +115,7 @@ class SupplierOrdersController
                 error_log("⚠️ No se encontraron ítems en la solicitud POST (supplier_order_id: {$supplierOrderId}).");
             }
 
-            // ==========================================================
-            // 🚀 NUEVO: DISPARAR LOGÍSTICA AUTOMÁTICA
-            // ==========================================================
+         
             require_once __DIR__ . '/../models/LogisticModel.php';
             $logisticModel = new LogisticModel();
             $logisticModel->createFromFullOrder($supplierOrderId);
@@ -210,7 +191,6 @@ class SupplierOrdersController
      * Endpoint: index.php?page=cancel_supplier_order
      */
     public function cancelSupplierOrder()
-<<<<<<< HEAD
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
@@ -249,46 +229,6 @@ class SupplierOrdersController
             ]);
         }
     }
-=======
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-    header('Content-Type: application/json; charset=utf-8');
-
-    $supplierOrderId = $_POST['supplier_order_id'] ?? null;
-
-    if (!$supplierOrderId) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Falta el ID del pedido proveedor.'
-        ]);
-        return;
-    }
-
-    try {
-        $supplierModel = new SupplierOrder();
-
-        // ✅ Llamar al método completo que cancela pedido + ítems + jerarquía
-        $success = $supplierModel->cancelOrderAndItems((int)$supplierOrderId);
-
-        if ($success) {
-            echo json_encode([
-                'success' => true,
-                'message' => '🛑 Pedido y partidas canceladas correctamente.'
-            ]);
-        } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'No se encontró o no se pudo cancelar el pedido.'
-            ]);
-        }
-    } catch (Exception $e) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Error al cancelar: ' . $e->getMessage()
-        ]);
-    }
-}
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
 
 
@@ -346,11 +286,7 @@ class SupplierOrdersController
         header('Content-Type: application/json; charset=utf-8');
         $itemId = $_POST['item_id'] ?? null;
         $quantity = $_POST['quantity'] ?? null;
-<<<<<<< HEAD
         $productId = $_POST['product_id'] ?? null; // 👈 Recibimos el ID del producto
-=======
-        $description = $_POST['description_product'] ?? null;
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
         if (!$itemId) {
             echo json_encode(['success' => false, 'message' => 'Falta ID del ítem.']);
@@ -362,7 +298,6 @@ class SupplierOrdersController
             $conn = $itemModel->getConnection();
             $stmt = $conn->prepare("
             UPDATE items_supplier_order 
-<<<<<<< HEAD
             SET quantity = :q, product_id = :p, items_supplier_order_last_update = NOW()
             WHERE id = :id
         ");
@@ -371,12 +306,6 @@ class SupplierOrdersController
                 ':p' => $productId,
                 ':id' => $itemId
             ]);
-=======
-            SET quantity = :q, description_product = :d, items_supplier_order_last_update = NOW()
-            WHERE id = :id
-        ");
-            $stmt->execute([':q' => $quantity, ':d' => $description, ':id' => $itemId]);
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
 
             // ==========================================================
             // 🔄 Actualizar estatus del pedido y jerarquía superior

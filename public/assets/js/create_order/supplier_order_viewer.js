@@ -247,17 +247,11 @@ function buildOrderCard(order) {
             <td>${
               editable
                 ? `<input type="text" class="form-control form-control-sm item-desc" value="${
-<<<<<<< HEAD
                     it.part_number && it.description_product ? it.part_number + ' - ' + it.description_product : (it.description_product ?? '')
                   }">`
                 : (it.part_number && it.description_product 
                     ? `<strong>${it.part_number}</strong> - ${it.description_product}` 
                     : (it.description_product ?? "—"))
-=======
-                    it.description_product ?? ""
-                  }">`
-                : it.description_product
->>>>>>> 555d25d6f5c3f4b78398f7e0b05baf92d385f547
             }</td>
             <td>${status}</td>
             ${
