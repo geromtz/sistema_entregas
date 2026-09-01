@@ -5,8 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const supplierTemplate = document.getElementById("supplier_template");
 
   /* ===========================================================
-   🕒 Esperar ID del pedido cliente (por si se genera dinámicamente)
-  =========================================================== */
+    🕒 Esperar ID del pedido cliente (por si se genera dinámicamente)
+   =========================================================== */
   const waitCustomerOrderId = async () => {
     let id = document.getElementById("customer_order_id")?.value?.trim();
     let tries = 0;
@@ -19,26 +19,23 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ===========================================================
-   🔔 Alertas Visuales (Conectadas con alertContainer)
+    🔔 Alertas Visuales (Conectadas con alertContainer)
    =========================================================== */
   const showToast = (msg, type = "info") => {
-    // Si utils.js está cargado, usamos la alerta visual
     if (window.showAlert) {
-      // Mapeamos 'warning' o 'info' al formato de tu showAlert
       window.showAlert(
         msg,
         type === "warning" ? "warning" : type === "error" ? "error" : "success",
       );
     } else {
-      // Fallback por si utils.js falla
       console.log(`[${type.toUpperCase()}] ${msg}`);
       alert(msg);
     }
   };
 
   /* ===========================================================
-   💾 Guardar pedido proveedor
-  =========================================================== */
+    💾 Guardar pedido proveedor
+   =========================================================== */
   saveBtn?.addEventListener("click", async () => {
     // 1️⃣ Determinar el subform activo
     const formId = window.activeSupplierFormId;
@@ -70,15 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const tiposConFechaObligatoria = [2, 3, 4, 5];
 
     if (tiposConFechaObligatoria.includes(tipoNum)) {
-      // Buscamos todos los inputs de fecha dentro del formulario activo
       const dateInputs = activeForm.querySelectorAll('input[type="date"]');
       let fechasIncompletas = false;
 
       dateInputs.forEach((input) => {
-        // Si el input está vacío o tiene el valor por defecto
         if (!input.value || input.value === "0000-00-00") {
           fechasIncompletas = true;
-          input.classList.add("is-invalid"); // Opcional: marca el error visualmente
+          input.classList.add("is-invalid");
         } else {
           input.classList.remove("is-invalid");
         }
@@ -106,39 +101,33 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 5️⃣ Construir FormData desde el subform activo
-    let fd;
-    if (activeForm instanceof HTMLFormElement) {
-      fd = new FormData(activeForm);
-    } else {
-      console.warn(
-        "⚠️ activeForm NO es un <form> (es un " + activeForm?.tagName + ")",
-      );
-      fd = new FormData();
-      // Recolectar todos los campos dentro del contenedor visible
-      activeForm.querySelectorAll("input, select, textarea").forEach((el) => {
-        if (el.name && !el.disabled) {
-          fd.append(el.name, el.value);
-        }
-      });
-    }
+    // 🔒 🚫 BLOQUEAR BOTÓN PARA EVITAR DOBLE ENVÍO / MULTIPLES REGISTROS
+    saveBtn.disabled = true;
+    const originalBtnText = saveBtn.textContent;
+    saveBtn.textContent = "Guardando...";
 
-    console.log("✅ FormData creado correctamente desde:", activeForm?.tagName);
-
-    // 5.1️⃣ Agregar datos de cabecera esperados por el backend
-    fd.append("customer_order_id", customerOrderId);
-    fd.append("mayorista", supplierId);
-    fd.append("id_branch", document.getElementById("branch_id")?.value || 1);
-    fd.append("id_order", orderNumber);
-    fd.append("id_type_order", String(tipoNum));
-
-    // 🧾 DEBUG opcional: mostrar lo que se enviará
-    console.groupCollapsed("📦 FormData a enviar");
-    for (const [k, v] of fd.entries()) console.log(k, "→", v);
-    console.groupEnd();
-
-    // 6️⃣ Enviar al backend
     try {
+      // 5️⃣ Construir FormData desde el subform activo
+      let fd;
+      if (activeForm instanceof HTMLFormElement) {
+        fd = new FormData(activeForm);
+      } else {
+        fd = new FormData();
+        activeForm.querySelectorAll("input, select, textarea").forEach((el) => {
+          if (el.name && !el.disabled) {
+            fd.append(el.name, el.value);
+          }
+        });
+      }
+
+      // 5.1️⃣ Agregar datos de cabecera esperados por el backend
+      fd.append("customer_order_id", customerOrderId);
+      fd.append("mayorista", supplierId);
+      fd.append("id_branch", document.getElementById("branch_id")?.value || 1);
+      fd.append("id_order", orderNumber);
+      fd.append("id_type_order", String(tipoNum));
+
+      // 6️⃣ Enviar al backend
       const res = await fetch("index.php?page=save_single_supplier_order", {
         method: "POST",
         body: fd,
@@ -153,7 +142,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // 7️⃣ Éxito → limpiar UI
       showToast("✅ Pedido mayorista guardado correctamente.", "success");
 
-      // Limpiar todos los campos del template
       supplierTemplate
         ?.querySelectorAll("input, select, textarea")
         .forEach((el) => {
@@ -161,15 +149,18 @@ document.addEventListener("DOMContentLoaded", () => {
           else el.value = "";
         });
 
-      // Ocultar el wrapper del formulario
       supplierFormWrapper?.classList.add("d-none");
 
       // 8️⃣ Notificar a otros módulos
-      window.dispatchEvent(new Event("supplierFormReset")); // reset visual
-      window.dispatchEvent(new Event("supplierFormSaved")); // recarga viewer
+      window.dispatchEvent(new Event("supplierFormReset"));
+      window.dispatchEvent(new Event("supplierFormSaved"));
     } catch (err) {
       console.error("❌ Error en guardado:", err);
       showToast("Error al guardar el pedido.", "danger");
+    } finally {
+      // 🔓 RESTAURAR BOTÓN PASE LO QUE PASE
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalBtnText;
     }
   });
 });

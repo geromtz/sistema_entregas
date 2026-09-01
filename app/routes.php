@@ -272,6 +272,12 @@ return [
         'public' => false
     ],
 
+    'logistic_pickups' => [
+        'controller' => 'LogisticController',
+        'method' => 'logisticPickups', // O el método que uses para las recolecciones de logística
+        'public' => false
+    ],
+
 
 
 

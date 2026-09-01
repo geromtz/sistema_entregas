@@ -39,8 +39,7 @@ class LogisticModel
             date_default_timezone_set('America/Monterrey');
             $hoy = date('Y-m-d');
 
-            // Definimos si es admin (Líder o Temo con ID 6)
-            $esAdmin = ($isLeader || $userId == 6);
+            $esAdmin = ($isLeader == 1 || $userId == 6);
 
             $query = "SELECT 
                 i.id AS item_id, 

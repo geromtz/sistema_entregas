@@ -102,7 +102,7 @@ class SupplierItem
                     ss.status_name,
                     t.tracking_number,
                     t.tracking_company,
-                    t.origin_branch,
+                    t.id_branch,
                     t.arrival_date
                 FROM items_supplier_order i
                 LEFT JOIN products p ON i.product_id = p.id

@@ -65,7 +65,7 @@ class TrackingSupplierOrdersController
                 'id_item_supplier_order' => $itemId,
                 'tracking_number'        => $_POST['tracking_number'] ?? null,
                 'tracking_company'       => $_POST['tracking_company'] ?? null,
-                'origin_branch'          => $_POST['origin_branch'] ?? null,
+                'id_branch' => $item['origin_branch_id'] ?? null,
                 'arrival_date'           => $_POST['arrival_date'] ?? null,
             ]);
 

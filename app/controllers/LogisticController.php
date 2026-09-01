@@ -12,6 +12,11 @@ class LogisticController
 
     public function myPickups()
     {
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        error_reporting(E_ALL);
+
+
         $userId   = $_SESSION['user']['id'] ?? 0;
         $isLeader = ($_SESSION['user']['is_leader'] ?? 0) == 1;
 
@@ -148,32 +153,47 @@ class LogisticController
 
 
     public function unassignDriver()
-{
-    if (ob_get_level()) ob_end_clean();
-    header('Content-Type: application/json');
+    {
+        if (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json');
 
-    try {
-        $itemId = $_POST['item_id'] ?? null;
+        try {
+            $itemId = $_POST['item_id'] ?? null;
 
-        if (!$itemId) {
-            throw new Exception("ID de ítem faltante.");
+            if (!$itemId) {
+                throw new Exception("ID de ítem faltante.");
+            }
+
+            // Llamamos al método correcto en el modelo
+            $result = $this->model->removeAssignment($itemId);
+
+            if ($result) {
+                echo json_encode(['success' => true]);
+            } else {
+                throw new Exception("Error al limpiar la asignación.");
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
         }
-
-        // Llamamos al método correcto en el modelo
-        $result = $this->model->removeAssignment($itemId);
-
-        if ($result) {
-            echo json_encode(['success' => true]);
-        } else {
-            throw new Exception("Error al limpiar la asignación.");
-        }
-    } catch (Exception $e) {
-        echo json_encode([
-            'success' => false,
-            'error' => $e->getMessage()
-        ]);
+        exit;
     }
-    exit;
-}
-    
+
+    public function logisticPickups()
+    {
+        $userId   = $_SESSION['user']['id'] ?? 0;
+        $isLeader = ($_SESSION['user']['is_leader'] ?? 0) == 1;
+
+        // 1. Traer datos de recolecciones pendientes para logística
+        $data = $this->model->getPendingPickups($userId, $isLeader);
+
+        // 2. Traer la lista de choferes para el modal de asignación
+        $drivers = $this->model->getAvailableDrivers();
+
+        // 3. Renderizar la vista específica de recolecciones logísticas
+        $view = 'logistic/logistic_pickups';
+        require __DIR__ . '/../views/layouts/app.php';
+    }
 }

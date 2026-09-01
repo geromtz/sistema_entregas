@@ -106,7 +106,7 @@ class SupplierOrdersController
                             'id_item_supplier_order' => $itemId,
                             'tracking_number' => $item['guide_number'] ?? null,
                             'tracking_company' => $item['courier'] ?? null,
-                            'origin_branch' => $item['origin_branch_id'] ?? $item['origin_branch'] ?? null, // 👈 Asegurar que reciba el ID de la sucursal seleccionada o creada
+                            'id_branch' => $item['origin_branch_id'] ?? null, // 👈 Asegúrate de usar 'id_branch'
                             'arrival_date' => $item['eta'] ?? null,
                         ]);
                     }
@@ -115,7 +115,7 @@ class SupplierOrdersController
                 error_log("⚠️ No se encontraron ítems en la solicitud POST (supplier_order_id: {$supplierOrderId}).");
             }
 
-         
+
             require_once __DIR__ . '/../models/LogisticModel.php';
             $logisticModel = new LogisticModel();
             $logisticModel->createFromFullOrder($supplierOrderId);
