@@ -248,6 +248,12 @@ return [
         'public' => false
     ],
 
+    'api_get_stage_data' => [
+        'controller' => 'MainLogisticController',
+        'method' => 'apiGetStageData',
+        'public' => false
+    ],
+
     'save_incident_ajax' => [
         'controller' => 'LogisticController',
         'method' => 'saveIncidentAjax',
@@ -278,10 +284,143 @@ return [
         'public' => false
     ],
 
+    'warehouse_reception' => [
+        'controller' => 'WarehouseController',
+        'method' => 'index',
+        'public' => false
+    ],
+    'process_warehouse_entry' => [
+        'controller' => 'WarehouseController',
+        'method' => 'storeEntry',
+        'public' => false
+    ],
 
+    'delivery' => [
+        'controller' => 'LogisticController',
+        'method' => 'logisticDeliveries', // O el nombre del método que prefieras en tu controlador
+        'public' => false
+    ],
+    'management_users' => [
+        'controller' => 'AdminUsersController',
+        'method' => 'index',
+        'public' => false
+    ],
+    'menu_editor' => [
+        'controller' => 'MenuEditorController',
+        'method' => 'index',
+        'public' => false
+    ],
+    'audit_logs' => [
+        'controller' => 'AuditController',
+        'method' => 'index',
+        'public' => false
+    ],
 
+    'stock_audit' => [
+        'controller' => 'WarehouseController',
+        'method' => 'stockAudit',
+        'public' => false
+    ],
 
+    // CLIENTES
 
+    'my_customers' => [
+        'controller' => 'CustomerController',
+        'method' => 'listCustomers',
+        'public' => false
+    ],
 
+    'update_customer_full' => [
+        'controller' => 'CustomerController',
+        'method' => 'updateCustomerFull',
+        'public' => false
+    ],
+    'get_customer_addresses' => [
+        'controller' => 'CustomerController',
+        'method' => 'getCustomerAddresses',
+        'public' => false
+    ],
 
+    'save_customer_address' => [
+        'controller' => 'CustomerController',
+        'method' => 'saveCustomerAddress',
+        'public' => false
+    ],
+    'delete_customer_address' => [
+        'controller' => 'CustomerController',
+        'method' => 'deleteCustomerAddress',
+        'public' => false
+    ],
+
+    // ==========================================
+    // MÓDULO DE PROSPECCIÓN Y CRM
+    // ==========================================
+
+    'my_prospects' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'index',
+        'public'     => false
+    ],
+    'store_prospect' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'store',
+        'public'     => false
+    ],
+    'update_prospect' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'update',
+        'public'     => false
+    ],
+    'save_interaction' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'saveInteraction',
+        'public'     => false
+    ],
+    'update_interaction' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'updateInteraction',
+        'public'     => false
+    ],
+    'get_interactions' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'getInteractions',
+        'public'     => false
+    ],
+    'check_duplicate_prospect' => [
+        'controller' => 'ProspectsController',
+        'method'     => 'checkDuplicate',
+        'public'     => false
+    ],
+
+    // ================= COTIZACIONES =================
+    'my_quotations' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'index',       
+        'public'     => false
+    ],
+    'create_quotation' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'create',      
+        'public'     => false
+    ],
+    'store_quotation' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'store',       
+        'public'     => false
+    ],
+    'get_customer_contacts' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'getCustomerContacts',       
+        'public'     => false
+    ],
+    'search_prospect' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'searchProspect',       
+        'public'     => false
+    ],
+    'store_quick_contact' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'storeQuickContact',       
+        'public'     => false
+    ]
 ];

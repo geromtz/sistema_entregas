@@ -13,7 +13,7 @@
 <div class="container">
     <div class="row justify-content-center mt-5">
         <div class="col-md-4">
-            <di v class="card shadow-sm">
+            <div v class="card shadow-sm">
                 <div class="card-body">
                     <h3 class="card-title text-center mb-4">Iniciar Sesión</h3>
                     <form method="POST" action="index.php?page=login_auth">
@@ -34,7 +34,7 @@
                         <?php endif; ?>
                     </form>
                 </div>
-            </di>
+            </div>
         </div>
     </div>
 </div>

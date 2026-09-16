@@ -30,6 +30,64 @@ class LogisticModel
         }
     }
 
+  public function getAllPickupsForLogistics()
+    {
+        try {
+            date_default_timezone_set('America/Monterrey');
+            $hoy = date('Y-m-d');
+
+            $query = "SELECT 
+                i.id AS item_id, 
+                CONCAT(p_prod.part_number, ' - ', p_prod.description) AS description_product, 
+                i.quantity,
+                COALESCE(s.supplier_order, 'S/F') as system_number,
+                COALESCE(cust.business_name, co.name_order, 'Stock / General') as name_order,
+                p.business_name as supplier_name,
+                s.id_order_type,
+                COALESCE(st.order_type, 'Normal') AS type_name,
+                CONCAT(u_drv.firstname, ' ', u_drv.apellidos) as assigned_driver_name,
+                l.pickup_status,
+                l.pickup_date,
+                CONCAT(u_pickup.firstname, ' ', u_pickup.apellidos) as pickup_user_name,
+                l.has_incident,
+                CASE 
+                    WHEN s.id_order_type IN (1, 2) THEN 'Producto Local'
+                    ELSE COALESCE(DATE_FORMAT(t.arrival_date, '%d/%m/%Y'), 'Sin fecha')
+                END AS arrival_info,
+                CASE 
+                    WHEN s.id_order_type IN (3, 4, 5) THEN COALESCE(t_branch.branch, 'Pendiente')
+                    ELSE COALESCE(ad_order.branch, 'Matriz')
+                END AS pickup_location,
+                (SELECT GROUP_CONCAT(
+                    CONCAT('• ', li.comment, ' - ', u.firstname, ' ', u.apellidos, ' (', DATE_FORMAT(li.created_at, '%d/%m/%Y %H:%i'), ')') 
+                    ORDER BY li.created_at DESC SEPARATOR '<br>') 
+                   FROM logistic_incidents li 
+                   INNER JOIN users u ON li.created_by = u.id
+                   WHERE li.id_logistic_status = l.id) as incident_history
+            FROM items_supplier_order i
+            INNER JOIN supplier_orders s ON i.id_supplier_order = s.id
+            INNER JOIN suppliers p ON s.id_supplier = p.id
+            LEFT JOIN products p_prod ON i.product_id = p_prod.id
+            LEFT JOIN customer_orders co ON s.id_customer_order = co.id
+            LEFT JOIN customers cust ON co.id_customer = cust.id
+            LEFT JOIN supplier_order_types st ON st.id = s.id_order_type
+            LEFT JOIN supplier_adress ad_order ON s.id_branch = ad_order.id
+            LEFT JOIN tracking_supplier_orders t ON t.id_item_supplier_order = i.id
+            LEFT JOIN supplier_adress t_branch ON t.id_branch = t_branch.id
+            LEFT JOIN logistic_status l ON l.id_item_supplier_order = i.id
+            LEFT JOIN users u_drv ON l.assigned_to = u_drv.id
+            LEFT JOIN users u_pickup ON l.pickup_by = u_pickup.id
+            ORDER BY i.id DESC";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error en getAllPickupsForLogistics: " . $e->getMessage());
+            return [];
+        }
+    }
+
     /**
      * Obtener recolecciones pendientes
      */
@@ -39,7 +97,7 @@ class LogisticModel
             date_default_timezone_set('America/Monterrey');
             $hoy = date('Y-m-d');
 
-            $esAdmin = ($isLeader == 1 || $userId == 6);
+            $esAdmin = ($isLeader == 1);
 
             $query = "SELECT 
                 i.id AS item_id, 
@@ -56,15 +114,15 @@ class LogisticModel
                     ELSE COALESCE(DATE_FORMAT(t.arrival_date, '%d/%m/%Y'), 'Sin fecha')
                 END AS arrival_info,
                 CASE 
-                    WHEN s.id_order_type IN (3, 4, 5) THEN COALESCE(t.origin_branch, 'Pendiente')
+                    WHEN s.id_order_type IN (3, 4, 5) THEN COALESCE(t_branch.branch, 'Pendiente')
                     ELSE COALESCE(ad_order.branch, 'Matriz')
                 END AS pickup_location,
                 (SELECT GROUP_CONCAT(
                     CONCAT('• ', li.comment, ' - ', u.firstname, ' ', u.apellidos, ' (', DATE_FORMAT(li.created_at, '%d/%m/%Y'), ')') 
                     ORDER BY li.created_at DESC SEPARATOR '<br>') 
-                 FROM logistic_incidents li 
-                 INNER JOIN users u ON li.created_by = u.id
-                 WHERE li.id_logistic_status = l.id) as incident_history
+                   FROM logistic_incidents li 
+                   INNER JOIN users u ON li.created_by = u.id
+                   WHERE li.id_logistic_status = l.id) as incident_history
             FROM items_supplier_order i
             INNER JOIN supplier_orders s ON i.id_supplier_order = s.id
             INNER JOIN suppliers p ON s.id_supplier = p.id
@@ -74,6 +132,7 @@ class LogisticModel
             LEFT JOIN supplier_order_types st ON st.id = s.id_order_type
             LEFT JOIN supplier_adress ad_order ON s.id_branch = ad_order.id
             LEFT JOIN tracking_supplier_orders t ON t.id_item_supplier_order = i.id
+            LEFT JOIN supplier_adress t_branch ON t.id_branch = t_branch.id
             LEFT JOIN logistic_status l ON l.id_item_supplier_order = i.id
             LEFT JOIN users u_drv ON l.assigned_to = u_drv.id
             
@@ -151,6 +210,11 @@ class LogisticModel
     public function markPickup($itemId, $userId)
     {
         try {
+            // 1️⃣ Consultar estado anterior antes de modificar
+            $stmtOld = $this->db->prepare("SELECT * FROM logistic_status WHERE id_item_supplier_order = ?");
+            $stmtOld->execute([$itemId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
             $stmt = $this->db->prepare("
                 UPDATE logistic_status
                 SET 
@@ -163,20 +227,37 @@ class LogisticModel
 
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->bindParam(':itemId', $itemId, PDO::PARAM_INT);
+            $result = $stmt->execute();
 
-            return $stmt->execute();
+            // 2️⃣ 📝 Registrar en la bitácora si la actualización tuvo éxito
+            if ($result && $oldData) {
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel($this->db);
+                $auditModel->log(
+                    (int)$userId,
+                    'MARK_PICKUP',
+                    'logistic_status',
+                    (int)$oldData['id'],
+                    $oldData,
+                    ['pickup_status' => 1, 'pickup_by' => $userId]
+                );
+            }
+
+            return $result;
         } catch (PDOException $e) {
             error_log("Error marking pickup: " . $e->getMessage());
             return false;
         }
     }
 
-    /**
-     * Marcar entrega
-     */
     public function markDelivery($itemId, $userId)
     {
         try {
+            // 1️⃣ Consultar estado anterior antes de modificar
+            $stmtOld = $this->db->prepare("SELECT * FROM logistic_status WHERE id_item_supplier_order = ?");
+            $stmtOld->execute([$itemId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
             $stmt = $this->db->prepare("
                 UPDATE logistic_status
                 SET 
@@ -189,8 +270,23 @@ class LogisticModel
 
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->bindParam(':itemId', $itemId, PDO::PARAM_INT);
+            $result = $stmt->execute();
 
-            return $stmt->execute();
+            // 2️⃣ 📝 Registrar en la bitácora si la actualización tuvo éxito
+            if ($result && $oldData) {
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel($this->db);
+                $auditModel->log(
+                    (int)$userId,
+                    'MARK_DELIVERY',
+                    'logistic_status',
+                    (int)$oldData['id'],
+                    $oldData,
+                    ['delivery_status' => 1, 'delivery_by' => $userId]
+                );
+            }
+
+            return $result;
         } catch (PDOException $e) {
             error_log("Error marking delivery: " . $e->getMessage());
             return false;
@@ -314,20 +410,40 @@ class LogisticModel
     /**
      * Inserta el log del incidente con 4 parámetros obligatorios
      */
-    public function insertIncident($statusId, $comment, $userId, $type)
+public function insertIncident($statusId, $comment, $userId, $type)
     {
         $sql = "INSERT INTO logistic_incidents 
             (id_logistic_status, incident_type, comment, created_by, created_at) 
             VALUES (?, ?, ?, ?, NOW())";
 
         $stmt = $this->db->prepare($sql);
+        $result = $stmt->execute([$statusId, $type, $comment, $userId]);
 
-        return $stmt->execute([
-            $statusId,
-            $type,
-            $comment,
-            $userId
-        ]);
+        if ($result) {
+            $incidentId = $this->db->lastInsertId();
+
+            // Actualizamos de una vez el indicador en logistic_status
+            $updateStatus = $this->db->prepare("UPDATE logistic_status SET has_incident = 1, updated_at = NOW() WHERE id = ?");
+            $updateStatus->execute([$statusId]);
+
+            // 📝 Registrar en la bitácora de auditoría
+            require_once __DIR__ . '/../models/AuditModel.php';
+            $auditModel = new AuditModel($this->db);
+            $auditModel->log(
+                (int)$userId,
+                'SAVE_INCIDENT',
+                'logistic_incidents',
+                (int)$incidentId,
+                null,
+                [
+                    'id_logistic_status' => $statusId,
+                    'incident_type' => $type,
+                    'comment' => $comment
+                ]
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -351,6 +467,11 @@ class LogisticModel
             $statusId = $this->getOrCreateStatus($itemId);
             $adminId  = $_SESSION['user']['id'] ?? null;
 
+            // 1️⃣ Consultar los datos ANTES de cambiar la asignación (para el old_data)
+            $stmtOld = $this->db->prepare("SELECT * FROM logistic_status WHERE id = ?");
+            $stmtOld->execute([$statusId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
             $query = "UPDATE logistic_status 
                      SET assigned_to = :driverId, 
                          assigned_at = NOW(), 
@@ -359,12 +480,29 @@ class LogisticModel
                      WHERE id = :statusId";
 
             $stmt = $this->db->prepare($query);
-            return $stmt->execute([
+            $result = $stmt->execute([
                 'driverId' => $driverId,
                 'adminId'  => $adminId,
                 'statusId' => $statusId
             ]);
+
+            // 2️⃣ 📝 REGISTRAR EN LA BITÁCORA DE AUDITORÍA
+            if ($result && $adminId) {
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel($this->db);
+                $auditModel->log(
+                    (int)$adminId,
+                    'ASSIGN_DRIVER',
+                    'logistic_status',
+                    (int)$statusId,
+                    $oldData,
+                    ['assigned_to' => $driverId]
+                );
+            }
+
+            return $result;
         } catch (PDOException $e) {
+            error_log("Error in updateAssignment: " . $e->getMessage());
             return false;
         }
     }
@@ -386,6 +524,45 @@ class LogisticModel
         } catch (PDOException $e) {
             error_log("Error unassigning: " . $e->getMessage());
             return false;
+        }
+    }
+
+    public function getAllDeliveriesForLogistics()
+    {
+        try {
+            $query = "SELECT 
+                co.id AS customer_order_id,
+                co.name_order AS customer_order_name,
+                co.purchase_order,
+                cust.business_name AS customer_name,
+                so.system_number,
+                CONCAT(u_seller.firstname, ' ', u_seller.apellidos) AS seller_name,
+                i.id AS item_id,
+                CONCAT(p_prod.part_number, ' - ', p_prod.description) AS description_product,
+                i.quantity,
+                p.business_name AS supplier_name,
+                l.pickup_status,
+                l.delivery_status,
+                CONCAT(u_deliv.firstname, ' ', u_deliv.apellidos) as delivery_driver_name,
+                l.delivery_date
+            FROM customer_orders co
+            LEFT JOIN customers cust ON co.id_customer = cust.id
+            LEFT JOIN system_orders so ON co.id_system_order = so.id
+            LEFT JOIN users u_seller ON co.created_by = u_seller.id
+            INNER JOIN supplier_orders sup ON sup.id_customer_order = co.id
+            INNER JOIN items_supplier_order i ON i.id_supplier_order = sup.id
+            INNER JOIN suppliers p ON sup.id_supplier = p.id
+            LEFT JOIN products p_prod ON i.product_id = p_prod.id
+            LEFT JOIN logistic_status l ON l.id_item_supplier_order = i.id
+            LEFT JOIN users u_deliv ON l.delivery_assigned_to = u_deliv.id
+            ORDER BY co.id DESC";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error en getAllDeliveriesForLogistics: " . $e->getMessage());
+            return [];
         }
     }
 }

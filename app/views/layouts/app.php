@@ -4,10 +4,10 @@
 require_once __DIR__ . '/header.php';
 require_once __DIR__ . '/../../models/Menu.php';
 
-// Generar menú dinámico
+// Generar menú dinámico por posición
 $menuModel = new Menu();
 $menuTree = $menuModel->buildMenuTree(
-    $menuModel->getMenusByDepartment($_SESSION['user']['department_id'])
+    $menuModel->getMenusByPosition($_SESSION['user']['id_position'])
 );
 ?>
 

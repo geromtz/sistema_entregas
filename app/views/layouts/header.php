@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../models/Menu.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 $menuModel = new Menu();
 $menuTree = $menuModel->buildMenuTree(
-    $menuModel->getMenusByDepartment($_SESSION['user']['department_id'])
+    $menuModel->getMenusByPosition($_SESSION['user']['id_position'])
 );
 ?>
 

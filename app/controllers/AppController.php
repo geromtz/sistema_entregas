@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/../models/Menu.php';
 
-class AppController {
+class AppController
+{
 
-    public function index() {
+    public function index()
+    {
         // 1️⃣ Sesión y autenticación
         if (session_status() === PHP_SESSION_NONE) session_start();
         if (!isset($_SESSION['user'])) {
@@ -11,10 +13,10 @@ class AppController {
             exit;
         }
 
-        // 2️⃣ Generar menú dinámico
+        // 2️⃣ Generar menú dinámico por posición
         $menuModel = new Menu();
         $menuTree = $menuModel->buildMenuTree(
-            $menuModel->getMenusByDepartment($_SESSION['user']['department_id'])
+            $menuModel->getMenusByPosition($_SESSION['user']['id_position'])
         );
 
         // 3️⃣ Cargar header
@@ -81,8 +83,7 @@ class AppController {
                           </div>";
                 }
             }
-        } 
-        else {
+        } else {
             // Si no hay subcarpeta (vista directa como dashboard_sales)
             if (file_exists($viewFile)) {
                 include $viewFile;

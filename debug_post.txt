@@ -1,6 +1,6 @@
 Array
 (
-    [varias_sucursales] => Array
+    [local] => Array
         (
             [items] => Array
                 (
@@ -9,30 +9,15 @@ Array
                             [quantity] => 1
                             [product] => 2HWN3 - "Laptop Dell Pro Intel Core Ultra 7-255U
                             [product_id] => 200
-                            [origin_branch] => GUADALAJARA
-                            [origin_branch_id] => 11
-                            [pickup_at_branch] => 1
-                            [eta] => 2026-09-02
-                        )
-
-                    [1] => Array
-                        (
-                            [quantity] => 15
-                            [product] => 910-002225 - MOUSE LOGITECH M185 DARK GREY OPTICO
-                            [product_id] => 1925
-                            [origin_branch] => PUEBLA
-                            [origin_branch_id] => 12
-                            [pickup_at_branch] => 1
-                            [eta] => 2026-09-01
                         )
 
                 )
 
         )
 
-    [customer_order_id] => 200
-    [mayorista] => 3
-    [id_branch] => 1
-    [id_order] => SYS-54321
-    [id_type_order] => 4
+    [customer_order_id] => 205
+    [mayorista] => 14
+    [id_branch] => 15
+    [id_order] => CVA-123
+    [id_type_order] => 1
 )

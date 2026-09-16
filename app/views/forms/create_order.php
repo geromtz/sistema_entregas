@@ -289,7 +289,39 @@
             </select>
 
           </div>
+
+          <!-- 📦 Bloque de Entrega en Varias Sucursales -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card border-warning bg-light shadow-sm">
+                <div class="card-body py-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_multi_branch" name="is_multi_branch" value="1" <?= !empty($formData['is_multi_branch']) ? 'checked' : '' ?>>
+                    <label class="form-check-label fw-bold text-dark small" for="is_multi_branch">
+                      <i class="bi bi-boxes text-warning me-1"></i> ¿Esta orden se distribuye en MÚLTIPLES SUCURSALES / Hospitales?
+                    </label>
+                  </div>
+
+                  <div id="multi_branch_details" class="mt-2 <?= empty($formData['is_multi_branch']) ? 'd-none' : '' ?>">
+                    <label class="form-label small fw-bold text-muted">Instrucciones Estándar de Distribución:</label>
+                    <textarea
+                      class="form-control form-control-sm font-monospace"
+                      name="multi_branch_instructions"
+                      rows="3"
+                      placeholder="Usa este estándar obligatorio:&#10;- Hospital X: 10 pzas (Atn. Juan Pérez)&#10;- Hospital Y: 5 pzas (Atn. Almacén)"><?= htmlspecialchars($formData['multi_branch_instructions'] ?? '') ?></textarea>
+                    <div class="form-text text-muted" style="font-size: 0.7rem;">
+                      💡 Formato requerido: <b>[Sucursal/Destino]: [Cantidad] ([Persona de atención])</b>. Logística usará esta guía exacta para despachar.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
         </div>
+
+
 
 
         <!-- Botón para añadir pedido mayorista -->
@@ -395,6 +427,17 @@
 
 
 </main>
+<script>
+  // Script rápido para mostrar/ocultar el textarea de multi-sucursales
+  document.getElementById('is_multi_branch')?.addEventListener('change', function() {
+    let details = document.getElementById('multi_branch_details');
+    if (this.checked) {
+      details.classList.remove('d-none');
+    } else {
+      details.classList.add('d-none');
+    }
+  });
+</script>
 <script src="public/assets/js/create_order/auto_save_customer.js"></script>
 <script src="public/assets/js/create_order/supplier_form_manager.js"></script>
 <script src="public/assets/js/create_order/supplier_order_submit.js"></script>

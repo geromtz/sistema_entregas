@@ -403,9 +403,9 @@ class OrdersController
         if (session_status() === PHP_SESSION_NONE) session_start();
 
         $userId = $_SESSION['user']['id'] ?? null;
-        $systemOrderId = $_GET['system_order_id'] ?? null;
+        $orderId = $_GET['system_order_id'] ?? $_GET['id'] ?? null;
 
-        if (!$userId || !$systemOrderId) {
+        if (!$userId || !$orderId) {
             http_response_code(403);
             echo "Acceso no autorizado.";
             return;
@@ -417,20 +417,35 @@ class OrdersController
         $orderModel = new Order();
         $userModel  = new User();
 
-        // 🧩 Buscar pedido asociado
-        $customerOrder = $orderModel->getCustomerOrderBySystemId($systemOrderId);
+        // Consultar directamente el customer_order por su ID principal
+        $db = $orderModel->getConnection();
+        $stmt = $db->prepare("SELECT * FROM customer_orders WHERE id = ?");
+        $stmt->execute([$orderId]);
+        $customerOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+
         if (!$customerOrder || empty($customerOrder['order_pdf_path'])) {
             http_response_code(404);
             echo "Archivo no encontrado.";
             return;
         }
 
-        // 🔐 Validar jerarquía (solo el dueño, su líder o altos mandos)
-        $allowedIds = $userModel->getTeamUserIds($userId);
-        if (!in_array($customerOrder['created_by'], $allowedIds)) {
-            http_response_code(403);
-            echo "No tienes permisos para acceder a este archivo.";
-            return;
+        // 🔐 Validar jerarquía O roles/puestos globales permitidos (Logística, Dirección, Tesorería, Admins)
+        $userPositionId = $_SESSION['user']['id_position'] ?? null;
+        $userDepartmentId = $_SESSION['user']['department_id'] ?? null;
+
+        // IDs de posición y departamento autorizados para ver todos los archivos
+        $allowedPositions = [1, 4, 7, 11, 12]; // Ajusta el 12 al id_position exacto de tu operador de logística
+        $allowedDepartments = [1, 4, 9];       // Dirección (1), Administración (4), Logística (9)
+
+        $isGlobalAuditor = in_array($userPositionId, $allowedPositions) || in_array($userDepartmentId, $allowedDepartments);
+
+        if (!$isGlobalAuditor) {
+            $allowedIds = $userModel->getTeamUserIds($userId);
+            if (!in_array($customerOrder['created_by'], $allowedIds)) {
+                http_response_code(403);
+                echo "No tienes permisos para acceder a este archivo.";
+                return;
+            }
         }
 
         // 📂 Ruta absoluta segura
@@ -441,9 +456,9 @@ class OrdersController
             return;
         }
 
-        // 📄 Forzar descarga o vista inline
+        // 📄 Forzar vista inline del PDF
         header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . basename($customerOrder['order_pdf_original']) . '"');
+        header('Content-Disposition: inline; filename="' . basename($customerOrder['order_pdf_original'] ?? 'orden_compra.pdf') . '"');
         header('Content-Length: ' . filesize($absolutePath));
         readfile($absolutePath);
         exit;

@@ -1,6 +1,7 @@
 <?php
 class LogisticController
-{
+{   
+    
 
     private $model;
 
@@ -87,9 +88,8 @@ class LogisticController
             $itemId  = $_POST['item_id'] ?? null;
             $comment = $_POST['comments'] ?? null;
             $type    = $_POST['type'] ?? 'pickup';
+            $releaseTask = $_POST['release_task'] ?? '0';
 
-            // CAMBIO AQUÍ: Accedemos al array 'user' y luego a 'id'
-            // Además, quitamos el "?? 1" para que si no hay sesión, lance error en lugar de culpar al Admin
             $userId  = $_SESSION['user']['id'] ?? null;
 
             if (!$userId) {
@@ -109,6 +109,11 @@ class LogisticController
             $result = $this->model->insertIncident($statusId, $comment, $userId, $type);
 
             if ($result) {
+                // Si el chofer indicó liberar la tarea por falta de tiempo o proveedor cerrado
+                if ($releaseTask == '1') {
+                    $this->model->removeAssignment($itemId);
+                }
+
                 echo json_encode(['success' => true]);
             } else {
                 throw new Exception("Error al guardar en base de datos.");
@@ -138,7 +143,7 @@ class LogisticController
 
             $itemIds = explode(',', $itemsRaw);
             foreach ($itemIds as $itemId) {
-                $this->model->updateAssignment($itemId, $driverId);
+                $this->model->updateAssignment(trim($itemId), $driverId);
             }
 
             echo json_encode(['success' => true]);
@@ -148,7 +153,7 @@ class LogisticController
                 'error' => $e->getMessage()
             ]);
         }
-        exit; // Crucial para que el sistema de rutas no intente cargar un layout después
+        exit; 
     }
 
 
@@ -183,17 +188,25 @@ class LogisticController
 
     public function logisticPickups()
     {
-        $userId   = $_SESSION['user']['id'] ?? 0;
-        $isLeader = ($_SESSION['user']['is_leader'] ?? 0) == 1;
-
-        // 1. Traer datos de recolecciones pendientes para logística
-        $data = $this->model->getPendingPickups($userId, $isLeader);
+        // 1. Traer TODOS los datos de recolecciones para el panel de logística sin filtros restrictivos
+        $data = $this->model->getAllPickupsForLogistics();
 
         // 2. Traer la lista de choferes para el modal de asignación
         $drivers = $this->model->getAvailableDrivers();
 
         // 3. Renderizar la vista específica de recolecciones logísticas
         $view = 'logistic/logistic_pickups';
+        require __DIR__ . '/../views/layouts/app.php';
+    }
+
+
+    public function logisticDeliveries()
+    {
+        // 1. Traer datos de órdenes de clientes y su estatus de entrega/recolección
+        $data = $this->model->getAllDeliveriesForLogistics();
+
+        // 2. Renderizar la vista específica de entregas
+        $view = 'logistic/logistic_delivery';
         require __DIR__ . '/../views/layouts/app.php';
     }
 }

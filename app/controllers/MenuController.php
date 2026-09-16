@@ -8,7 +8,10 @@ class MenuController {
         $this->menuModel = new Menu();
     }
 
-    public function getMenuForUser($id_department) {
-        return $this->menuModel->getMenusByDepartment($id_department);
-    }
+    public function getMenuForUser($id_position) {
+    // 🔍 Depuración rápida: ¿Qué ID de posición está llegando aquí y qué devuelve el modelo?
+    $menus = $this->menuModel->getMenusByPosition($id_position);
+    // var_dump($id_position, $menus); exit; 
+    return $menus;
+}
 }

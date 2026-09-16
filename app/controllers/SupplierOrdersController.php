@@ -120,6 +120,17 @@ class SupplierOrdersController
             $logisticModel = new LogisticModel();
             $logisticModel->createFromFullOrder($supplierOrderId);
 
+            require_once __DIR__ . '/../models/AuditModel.php';
+            $auditModel = new AuditModel($supplierModel->getConnection());
+            $auditModel->log(
+                (int)$userId, 
+                'CREATE_SUPPLIER_ORDER', 
+                'supplier_orders', 
+                (int)$supplierOrderId, 
+                null, 
+                ['supplier_order_id' => $supplierOrderId, 'customer_order_id' => $customerOrderId, 'items_count' => count($items ?? [])]
+            );
+
             // ==========================================================
             // 🔄 Recalcular estado del pedido proveedor y propagar
             // ==========================================================
@@ -195,6 +206,7 @@ class SupplierOrdersController
         if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
 
+        $userId = $_SESSION['user']['id'] ?? null;
         $supplierOrderId = $_POST['supplier_order_id'] ?? null;
 
         if (!$supplierOrderId) {
@@ -207,11 +219,31 @@ class SupplierOrdersController
 
         try {
             $supplierModel = new SupplierOrder();
+            $conn = $supplierModel->getConnection();
 
-            // ✅ Llamar al método completo que cancela pedido + ítems + jerarquía
+            // 1️⃣ Consultar los datos ANTES de cancelar
+            $stmtOld = $conn->prepare("SELECT * FROM supplier_orders WHERE id = ?");
+            $stmtOld->execute([(int)$supplierOrderId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+            // 2️⃣ Ejecutar la cancelación
             $success = $supplierModel->cancelOrderAndItems((int)$supplierOrderId);
 
             if ($success) {
+                // 3️⃣ 📝 REGISTRAR EN LA BITÁCORA DE AUDITORÍA (CANCELACIÓN)
+                if ($userId) {
+                    require_once __DIR__ . '/../models/AuditModel.php';
+                    $auditModel = new AuditModel($conn);
+                    $auditModel->log(
+                        (int)$userId, 
+                        'CANCEL_SUPPLIER_ORDER', 
+                        'supplier_orders', 
+                        (int)$supplierOrderId, 
+                        $oldData, 
+                        ['id_status' => 5, 'status_name' => 'Cancelado']
+                    );
+                }
+
                 echo json_encode([
                     'success' => true,
                     'message' => '🛑 Pedido y partidas canceladas correctamente.'
@@ -239,14 +271,15 @@ class SupplierOrdersController
         if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
 
+        $userId = $_SESSION['user']['id'] ?? null; // 👈 Obtenemos el usuario activo
         $supplierOrderId = $_POST['supplier_order_id'] ?? null;
         $supplierId      = $_POST['id_supplier'] ?? null;
         $orderNumber     = $_POST['supplier_order'] ?? null;
         $orderTypeId     = $_POST['id_order_type'] ?? null;
         $branchId        = $_POST['id_branch'] ?? null;
 
-        if (!$supplierOrderId) {
-            echo json_encode(['success' => false, 'message' => 'Falta el ID del pedido proveedor.']);
+        if (!$supplierOrderId || !$userId) {
+            echo json_encode(['success' => false, 'message' => 'Faltan datos obligatorios o sesión no iniciada.']);
             return;
         }
 
@@ -254,6 +287,12 @@ class SupplierOrdersController
             $supplierModel = new SupplierOrder();
             $conn = $supplierModel->getConnection();
 
+            // 1️⃣ (Opcional pero recomendado) Consultar los datos ANTES del cambio para el "Dato anterior"
+            $stmtOld = $conn->prepare("SELECT * FROM supplier_orders WHERE id = ?");
+            $stmtOld->execute([$supplierOrderId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+            // 2️⃣ Ejecutar la actualización
             $sql = "
             UPDATE supplier_orders
             SET 
@@ -269,9 +308,29 @@ class SupplierOrdersController
                 ':supplier_id'   => $supplierId ?: null,
                 ':supplier_order' => $orderNumber,
                 ':order_type'    => $orderTypeId,
-                ':branch_id'     => $branchId ?: 1, // ⚙️ “1 = No aplica” por defecto
+                ':branch_id'     => $branchId ?: 1,
                 ':id'            => $supplierOrderId,
             ]);
+
+            // 3️⃣ 📝 REGISTRAR EN LA BITÁCORA DE AUDITORÍA
+            require_once __DIR__ . '/../models/AuditModel.php';
+            $auditModel = new AuditModel($conn);
+            
+            $newData = [
+                'id_supplier' => $supplierId,
+                'supplier_order' => $orderNumber,
+                'id_order_type' => $orderTypeId,
+                'id_branch' => $branchId
+            ];
+
+            $auditModel->log(
+                (int)$userId, 
+                'UPDATE_SUPPLIER_ORDER', 
+                'supplier_orders', 
+                (int)$supplierOrderId, 
+                $oldData, // Guarda cómo estaba antes
+                $newData  // Guarda cómo quedó
+            );
 
             echo json_encode(['success' => true, 'message' => 'Pedido proveedor actualizado correctamente.']);
         } catch (Exception $e) {
@@ -283,19 +342,29 @@ class SupplierOrdersController
 
     public function updateSupplierItem()
     {
+        if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
+
+        $userId = $_SESSION['user']['id'] ?? null;
         $itemId = $_POST['item_id'] ?? null;
         $quantity = $_POST['quantity'] ?? null;
-        $productId = $_POST['product_id'] ?? null; // 👈 Recibimos el ID del producto
+        $productId = $_POST['product_id'] ?? null;
 
-        if (!$itemId) {
-            echo json_encode(['success' => false, 'message' => 'Falta ID del ítem.']);
+        if (!$itemId || !$userId) {
+            echo json_encode(['success' => false, 'message' => 'Faltan datos obligatorios o sesión no iniciada.']);
             return;
         }
 
         try {
             $itemModel = new SupplierItem();
             $conn = $itemModel->getConnection();
+
+            // 1️⃣ Consultar los datos del ítem ANTES del cambio
+            $stmtOld = $conn->prepare("SELECT * FROM items_supplier_order WHERE id = ?");
+            $stmtOld->execute([$itemId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+            // 2️⃣ Ejecutar la actualización
             $stmt = $conn->prepare("
             UPDATE items_supplier_order 
             SET quantity = :q, product_id = :p, items_supplier_order_last_update = NOW()
@@ -306,6 +375,24 @@ class SupplierOrdersController
                 ':p' => $productId,
                 ':id' => $itemId
             ]);
+
+            // 3️⃣ 📝 REGISTRAR EN LA BITÁCORA DE AUDITORÍA
+            require_once __DIR__ . '/../models/AuditModel.php';
+            $auditModel = new AuditModel($conn);
+            
+            $newData = [
+                'quantity' => $quantity,
+                'product_id' => $productId
+            ];
+
+            $auditModel->log(
+                (int)$userId,
+                'UPDATE_SUPPLIER_ITEM',
+                'items_supplier_order',
+                (int)$itemId,
+                $oldData,
+                $newData
+            );
 
             // ==========================================================
             // 🔄 Actualizar estatus del pedido y jerarquía superior

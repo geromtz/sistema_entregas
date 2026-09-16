@@ -1,110 +1,116 @@
 <?php
+// app/views/logistic/logistic_pickups.php
 $isLeader = (($_SESSION['user']['is_leader'] ?? 0) == 1);
 ?>
-
-<?php
-function renderArriboLogistica($arrivalInfo)
-{
-    if ($arrivalInfo === 'Producto Local') {
-        return '<span class="badge arrival-bg bg-primary-subtle text-primary">Producto Local</span>';
+<style>
+    .table-warning-subtle {
+        background-color: rgba(255, 193, 7, 0.08) !important;
+        border-left: 4px solid #ffc107;
     }
+</style>
 
-    $fechaArribo = DateTime::createFromFormat('d/m/Y', $arrivalInfo);
-
-    if (!$fechaArribo) {
-        return '<span class="badge bg-light text-dark border">' . htmlspecialchars($arrivalInfo) . '</span>';
-    }
-
-    $fechaArribo->setTime(0, 0, 0);
-    $hoy = new DateTime();
-    $hoy->setTime(0, 0, 0);
-
-    $esUrgente = ($fechaArribo < $hoy);
-    $badgeClass = $esUrgente ? 'urgente-blink text-danger fw-bold' : 'text-dark';
-    $iconClass = $esUrgente ? 'bi-exclamation-triangle-fill' : 'bi-calendar3';
-
-    $html = '<div class="arrival-badge ' . $badgeClass . '">';
-    $html .= '<i class="bi ' . $iconClass . ' me-1"></i>' . htmlspecialchars($arrivalInfo);
-
-    if ($esUrgente) {
-        $intervalo = $hoy->diff($fechaArribo);
-        $diasAtraso = $intervalo->days > 0 ? $intervalo->days : 1;
-        $txtDia = ($diasAtraso == 1) ? 'día' : 'días';
-        $html .= '<span class="d-block small text-uppercase" style="font-size: 0.65rem; mt-n1">';
-        $html .= "Atrasado $diasAtraso $txtDia</span>";
-    }
-
-    $html .= '</div>';
-    return $html;
-}
-?>
-
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0">
-            <i class="bi bi-box-arrow-in-down-right me-2 text-primary"></i>
-            Panel de Control de Recolecciones (Logística)
-        </h3>
-        <span class="badge bg-primary px-3 py-2 shadow-sm">
-            <span id="counterDisplay"><?= count($data) ?></span> Pendientes por Asignar
-        </span>
+<div class="container-fluid px-4 mt-4">
+    <!-- Encabezado y Métricas Pro -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-kanban text-primary me-2"></i>Centro de Control de Recolecciones
+            </h2>
+            <p class="text-muted small mb-0">Gestión global, asignación de rutas y monitoreo de carga para proveedores.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm shadow-sm" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            </button>
+        </div>
     </div>
 
-    <!-- Filtros y Acciones -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body bg-light border-bottom p-3">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="small fw-bold text-muted mb-1 text-uppercase">Buscador</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                        <input type="text" id="logisticsSearch" class="form-control border-start-0" placeholder="Proveedor, pedido...">
-                    </div>
+    <!-- Tarjetas de Resumen (KPIs) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white border-start border-primary border-4">
+                <div class="card-body">
+                    <span class="text-muted small text-uppercase fw-bold">Total en Pantalla</span>
+                    <h3 class="fw-bold text-dark mb-0 mt-1" id="kpiTotal"><?= count($data) ?></h3>
                 </div>
-
-                <div class="col-md-2">
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="hideAssigned" checked>
-                        <label class="form-check-label small fw-bold text-primary" for="hideAssigned">Ocultar asignados</label>
-                    </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white border-start border-warning border-4">
+                <div class="card-body">
+                    <span class="text-muted small text-uppercase fw-bold">Sin Asignar (Pendientes)</span>
+                    <h3 class="fw-bold text-dark mb-0 mt-1" id="kpiUnassigned">0</h3>
                 </div>
-
-                <div class="col-md-2">
-                    <label class="small fw-bold text-muted mb-1 text-uppercase">Agrupar por</label>
-                    <select id="groupBySelect" class="form-select">
-                        <option value="none">Sin agrupar</option>
-                        <option value="supplier">Proveedor</option>
-                        <option value="type">Tipo</option>
-                    </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white border-start border-info border-4">
+                <div class="card-body">
+                    <span class="text-muted small text-uppercase fw-bold">Asignados a Ruta</span>
+                    <h3 class="fw-bold text-dark mb-0 mt-1" id="kpiAssigned">0</h3>
                 </div>
-
-                <div class="col-md-5 d-flex justify-content-end gap-2">
-                    <div id="massActions" class="d-none">
-                        <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#assignmentModal" onclick="prepareAssignment()">
-                            <i class="bi bi-person-plus-fill"></i> Asignar Chofer (<span id="selectedCount">0</span>)
-                        </button>
-                    </div>
-                    <button class="btn btn-outline-secondary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white border-start border-success border-4">
+                <div class="card-body">
+                    <span class="text-muted small text-uppercase fw-bold">Completados</span>
+                    <h3 class="fw-bold text-dark mb-0 mt-1">--</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tabla de Recolecciones -->
-    <div class="card shadow-sm border-0 overflow-hidden">
+    <!-- Barra de Herramientas y Filtros Avanzados -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body bg-light rounded p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="logisticsSearch" class="form-control border-start-0" placeholder="Buscar por proveedor, orden, producto...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="groupBySelect" class="form-select shadow-sm">
+                        <option value="none">-- Agrupar filas por --</option>
+                        <option value="supplier">Proveedor</option>
+                        <option value="type">Tipo de Arribo</option>
+                        <option value="order">Pedido Mayorista</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check form-switch pt-2">
+                        <input class="form-check-input" type="checkbox" id="hideAssigned">
+                        <label class="form-check-label small fw-bold text-secondary" for="hideAssigned">Ocultar asignados</label>
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <div id="massActions" class="d-none">
+                        <button type="button" class="btn btn-primary fw-bold shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#assignmentModal" onclick="prepareAssignment()">
+                            <i class="bi bi-truck me-1"></i> Asignar Selección (<span id="selectedCount">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Principal de Gestión -->
+    <div class="card border-0 shadow-sm overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="mainLogisticsTable">
-                <thead class="table-dark text-nowrap">
+                <thead class="table-dark text-uppercase fs-7">
                     <tr>
-                        <th class="ps-4 text-center" style="width: 50px;">
-                            <input type="checkbox" class="form-check-input border-white" id="selectAllItems">
+                        <th class="ps-4 text-center" style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="selectAllItems">
                         </th>
-                        <th>Origen / Sucursal</th>
-                        <th>Arribo / Estatus</th>
-                        <th>Pedido</th>
-                        <th>Asignado A</th>
-                        <th>Producto</th>
-                        <th class="text-center pe-4">Acción</th>
+                        <th>Proveedor / Ubicación</th>
+                        <th>Tipo / Arribo</th>
+                        <th>Pedido Mayorista</th>
+                        <th>Chofer / Responsable</th>
+                        <th>Detalle de Producto</th>
+                        <th class="text-center pe-4">Acciones de Control</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -112,66 +118,93 @@ function renderArriboLogistica($arrivalInfo)
                         $supplierName = $row['supplier_name'] ?? 'S/N';
                         $isLocal = ($row['arrival_info'] === 'Producto Local');
                         $itemId = $row['item_id'];
+                        $isAssigned = !empty($row['assigned_driver_name']);
+                        $hasIncidents = (!empty($row['has_incident']) && $row['has_incident'] == 1) || !empty($row['incident_history']);
+
+                        // Determinamos el estilo de la fila: si está asignado o si tiene un incidente de rebote
+                        $rowClass = '';
+                        if ($isAssigned) {
+                            $rowClass = 'table-light text-muted';
+                        } elseif ($hasIncidents) {
+                            $rowClass = 'table-warning-subtle'; // Tono sutil amarillo para alertas de rebote
+                        }
                     ?>
-                        <tr class="logistics-row"
+                        <tr class="logistics-row <?= $rowClass ?>"
                             data-supplier="<?= htmlspecialchars($supplierName) ?>"
                             data-type="<?= $isLocal ? 'Local' : 'Foráneo' ?>"
+                            data-order="<?= htmlspecialchars($row['system_number']) ?>"
+                            data-assigned="<?= $isAssigned ? '1' : '0' ?>"
                             data-search-content="<?= strtolower(htmlspecialchars($supplierName . ' ' . $row['system_number'] . ' ' . $row['description_product'])) ?>">
 
-                            <td class="ps-4 text-center" style="width: 50px;">
+                            <td class="ps-4 text-center">
                                 <input type="checkbox" class="form-check-input item-checkbox" value="<?= $itemId ?>">
                             </td>
-
                             <td>
                                 <div class="fw-bold text-dark text-uppercase"><?= htmlspecialchars($supplierName) ?></div>
-                                <small class="text-muted"><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($row['pickup_location'] ?? 'N/A') ?></small>
-                            </td>
+                                <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                    <span class="badge bg-light text-secondary border"><i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($row['pickup_location'] ?? 'Matriz') ?></span>
 
+                                    <!-- Alerta visual e historial si fue rebotado por el chofer -->
+                                    <?php if ($hasIncidents): ?>
+                                        <span class="badge bg-warning text-dark border border-warning"
+                                            data-bs-toggle="popover"
+                                            data-bs-html="true"
+                                            data-bs-trigger="hover focus"
+                                            title="<i class='bi bi-exclamation-triangle-fill me-1'></i> Historial de Incidentes"
+                                            data-bs-content="<?= htmlspecialchars($row['incident_history']) ?>"
+                                            style="cursor: pointer;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Con Incidente
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                             <td>
-                                <span class="badge <?= $isLocal ? 'bg-primary-subtle text-primary' : 'bg-light text-dark border' ?>">
-                                    <?= renderArriboLogistica($row['arrival_info']) ?>
-                                </span>
+                                <?php if ($isLocal): ?>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Local</span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Foráneo (<?= htmlspecialchars($row['arrival_info']) ?>)</span>
+                                <?php endif; ?>
                             </td>
-
                             <td>
-                                <div class="badge bg-light text-dark border">#<?= htmlspecialchars($row['system_number']) ?></div>
+                                <span class="fw-bold text-dark">#<?= htmlspecialchars($row['system_number']) ?></span>
                             </td>
-
                             <td>
                                 <div id="assign-container-<?= $itemId ?>">
-                                    <?php if (!empty($row['assigned_driver_name'])): ?>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <span class="badge bg-info text-dark">
-                                                <?= htmlspecialchars($row['assigned_driver_name']) ?>
+                                    <?php if (!empty($row['pickup_status']) && $row['pickup_status'] == 1): ?>
+                                        <div class="d-flex flex-column">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 mb-1 w-fit">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Recolectado
                                             </span>
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-danger border-0 p-0 px-1"
-                                                onclick="unassignDriver(<?= $itemId ?>)"
-                                                title="Quitar asignación">
+                                            <small class="text-muted" style="font-size: 0.75rem;">
+                                                Por: <strong><?= htmlspecialchars($row['pickup_user_name'] ?? 'N/D') ?></strong><br>
+                                                El: <?= htmlspecialchars($row['pickup_date']) ?>
+                                            </small>
+                                        </div>
+                                    <?php elseif ($isAssigned): ?>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                                <i class="bi bi-person-fill me-1"></i><?= htmlspecialchars($row['assigned_driver_name']) ?>
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="unassignDriver(<?= $itemId ?>)" title="Quitar asignación">
                                                 <i class="bi bi-x-circle-fill"></i>
                                             </button>
                                         </div>
                                     <?php else: ?>
-                                        <span class="badge bg-light text-muted border">Pendiente</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border">Sin Asignar</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
-
                             <td>
                                 <div class="fw-bold text-dark"><?= (int)$row['quantity'] ?> pz</div>
-                                <small class="text-dark d-block fw-bold" style="line-height: 1.2; font-size: 0.85rem;">
-                                    <?= htmlspecialchars($row['description_product']) ?>
-                                </small>
+                                <span class="small text-muted"><?= htmlspecialchars($row['description_product']) ?></span>
                             </td>
-
                             <td class="text-center pe-4">
-                                <div class="btn-group shadow-sm border rounded bg-white">
-                                    <form method="POST" action="index.php?page=mark_pickup" onsubmit="return confirm('¿Confirmas la recolección de este ítem?');">
-                                        <input type="hidden" name="item_id" value="<?= $itemId ?>">
-                                        <button type="submit" class="btn btn-white btn-sm text-success border-end" title="Marcar Recolectado"><i class="bi bi-check-lg"></i></button>
-                                    </form>
-                                    <button class="btn btn-white btn-sm text-warning" onclick="reportIncident(<?= $itemId ?>, '<?= htmlspecialchars($row['description_product']) ?>')" title="Reportar Incidente">
-                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                <div class="btn-group shadow-sm">
+                                    <button type="button" class="btn btn-white btn-sm border text-primary" data-bs-toggle="modal" data-bs-target="#assignmentModal" onclick="quickAssign(<?= $itemId ?>)" title="Asignar individual o excepción">
+                                        <i class="bi bi-person-plus"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-white btn-sm border text-danger" onclick="reportIncident(<?= $itemId ?>, '<?= htmlspecialchars($row['description_product']) ?>')" title="Ver / Reportar Incidente o Excepción">
+                                        <i class="bi bi-exclamation-triangle"></i>
                                     </button>
                                 </div>
                             </td>
@@ -181,298 +214,224 @@ function renderArriboLogistica($arrivalInfo)
             </table>
         </div>
     </div>
-</div>
 
-<!-- Modal de Asignación de Chofer -->
-<div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <form action="" method="POST">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Asignar Chofer a Recolección</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small">Items seleccionados: <strong id="modalSelectedCount">0</strong></p>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="switchApoyo">
-                        <label class="form-check-label small text-muted" for="switchApoyo">Mostrar Personal de Apoyo</label>
-                    </div>
-                    <input type="hidden" name="selected_items" id="selectedItemsInput">
-                    <select name="driver_id" id="selectChofer" class="form-select border-primary shadow-sm" required>
-                        <option value="">-- Seleccionar Chofer --</option>
-                    </select>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary fw-bold">Confirmar Asignación</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-<!-- Modal de Incidentes -->
-<div class="modal fade" id="incidentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title"><i class="bi bi-exclamation-octagon-fill text-warning me-2"></i>Reportar Incidente</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-secondary border-0 mb-3">
-                    <small class="text-muted d-block text-uppercase fw-bold mb-1">Producto / Ítem:</small>
-                    <span id="incidentProductText" class="fw-bold text-dark">---</span>
-                </div>
-                <form id="formIncidente">
-                    <input type="hidden" name="item_id" id="modal_item_id">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Detalle del Problema:</label>
-                        <textarea name="comments" id="modal_comments" class="form-control" rows="4" placeholder="¿Por qué no se pudo recolectar?" style="resize: none;"></textarea>
+
+    <!-- Modal de Asignación / Excepciones (Vacaciones o Emergencias) -->
+    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <form action="" method="POST" id="formAsignacionModal">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="bi bi-truck-front me-2"></i>Asignación de Ruta / Cobertura</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div id="mensajeFeedback" class="text-center p-2 rounded d-none"></div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-primary py-2 small mb-3">
+                            <i class="bi bi-info-circle me-1"></i> Partidas seleccionadas: <strong id="modalSelectedCount">0</strong>
+                        </div>
+                        <!-- Switch clave para coberturas o personal temporal -->
+                        <div class="form-check form-switch mb-3 bg-light p-2 rounded border">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" id="switchApoyo">
+                            <label class="form-check-label small fw-bold text-dark" for="switchApoyo">
+                                <i class="bi bi-shield-exclamation text-warning me-1"></i> Habilitar personal de apoyo (Vacaciones / Emergencia)
+                            </label>
+                        </div>
+                        <input type="hidden" name="selected_items" id="selectedItemsInput">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Asignar a Responsable:</label>
+                            <select name="driver_id" id="selectChofer" class="form-select border-primary shadow-sm" required>
+                                <option value="">-- Seleccionar Responsable --</option>
+                            </select>
+                            <div class="form-text text-muted small mt-1">Si no hay choferes, usa personal interno para evitar vueltas huérfanas y respalda con una nota de incidente si es necesario.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-sm fw-bold px-4">Guardar Asignación</button>
+                    </div>
                 </form>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" id="btnGuardarIncidente" onclick="guardarIncidenteJS()" class="btn btn-warning fw-bold shadow-sm">
-                    <i class="bi bi-save me-1"></i> Guardar Reporte
-                </button>
-            </div>
         </div>
     </div>
-</div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('logisticsSearch');
-        const groupBySelect = document.getElementById('groupBySelect');
-        const hideAssignedSwitch = document.getElementById('hideAssigned');
-        const tableBody = document.querySelector('#mainLogisticsTable tbody');
-        const selectAll = document.getElementById('selectAllItems');
-        const massActions = document.getElementById('massActions');
-        const switchApoyo = document.getElementById('switchApoyo');
-        const selectChofer = document.getElementById('selectChofer');
-        const formAsignacion = document.querySelector('#assignmentModal form');
+    <!-- Scripts de control pro -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('logisticsSearch');
+            const groupBySelect = document.getElementById('groupBySelect');
+            const hideAssignedSwitch = document.getElementById('hideAssigned');
+            const tableBody = document.querySelector('#mainLogisticsTable tbody');
+            const selectAll = document.getElementById('selectAllItems');
+            const massActions = document.getElementById('massActions');
+            const switchApoyo = document.getElementById('switchApoyo');
+            const selectChofer = document.getElementById('selectChofer');
+            const formAsignacion = document.getElementById('formAsignacionModal');
 
-        const IS_LEADER = true; // Vista exclusiva de administración/logística
+            function updateKPIs() {
+                const rows = document.querySelectorAll('.logistics-row');
+                let unassigned = 0;
+                let assigned = 0;
+                rows.forEach(r => {
+                    if (r.getAttribute('data-assigned') === '1') assigned++;
+                    else unassigned++;
+                });
+                document.getElementById('kpiUnassigned').innerText = unassigned;
+                document.getElementById('kpiAssigned').innerText = assigned;
+            }
 
-        if (searchInput) searchInput.addEventListener('input', applyFilters);
-        if (groupBySelect) groupBySelect.addEventListener('change', applyFilters);
-        if (hideAssignedSwitch) hideAssignedSwitch.addEventListener('change', applyFilters);
+            function applyFilters() {
+                const term = searchInput.value.toLowerCase();
+                const groupBy = groupBySelect.value;
+                const hideAssigned = hideAssignedSwitch.checked;
+                const rows = Array.from(document.querySelectorAll('.logistics-row'));
 
-        function applyFilters() {
-            const term = searchInput.value.toLowerCase();
-            const groupBy = groupBySelect.value;
-            const hideAssigned = hideAssignedSwitch ? hideAssignedSwitch.checked : false;
-            const rows = Array.from(document.querySelectorAll('.logistics-row'));
+                document.querySelectorAll('.group-header').forEach(h => h.remove());
 
-            document.querySelectorAll('.group-header').forEach(h => h.remove());
+                rows.forEach(row => {
+                    const content = row.getAttribute('data-search-content') || '';
+                    const isAssigned = row.getAttribute('data-assigned') === '1';
 
-            rows.forEach(row => {
-                const content = row.getAttribute('data-search-content') || '';
-                const cellAsignado = row.cells[4] ? row.cells[4].innerText : '';
-                const isAssigned = row.classList.contains('is-assigned') || !cellAsignado.includes('Pendiente');
+                    const matchesSearch = content.includes(term);
+                    const matchesAssigned = !hideAssigned || !isAssigned;
 
-                const matchesSearch = content.includes(term);
-                const matchesAssignedFilter = !hideAssigned || !isAssigned;
-
-                if (matchesSearch && matchesAssignedFilter) {
-                    row.style.display = '';
-                    if (isAssigned && !hideAssigned) {
-                        row.style.opacity = '0.7';
-                        row.classList.add('table-light');
+                    if (matchesSearch && matchesAssigned) {
+                        row.style.display = '';
                     } else {
-                        row.style.opacity = '1';
-                        row.classList.remove('table-light');
+                        row.style.display = 'none';
                     }
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            if (groupBy !== 'none') {
-                const visibleRows = rows.filter(r => r.style.display !== 'none');
-                const groups = {};
-
-                visibleRows.forEach(row => {
-                    const val = row.getAttribute(`data-${groupBy}`) || 'Otros';
-                    if (!groups[val]) groups[val] = [];
-                    groups[val].push(row);
                 });
 
-                Object.keys(groups).sort().forEach(groupName => {
-                    const header = document.createElement('tr');
-                    header.className = 'group-header table-secondary align-middle';
+                if (groupBy !== 'none') {
+                    const visibleRows = rows.filter(r => r.style.display !== 'none');
+                    const groups = {};
 
-                    header.innerHTML = `
-                        <td class="ps-4 text-center">
-                            <input type="checkbox" class="group-selector form-check-input border-dark">
-                        </td>
-                        <td colspan="6" class="py-2 ps-3 small text-uppercase fw-bold text-dark">
-                            ${groupName} <span class="badge bg-dark ms-2">${groups[groupName].length}</span>
+                    visibleRows.forEach(row => {
+                        const val = row.getAttribute(`data-${groupBy}`) || 'Otros';
+                        if (!groups[val]) groups[val] = [];
+                        groups[val].push(row);
+                    });
+
+                    Object.keys(groups).sort().forEach(groupName => {
+                        const header = document.createElement('tr');
+                        header.className = 'group-header table-secondary fw-bold';
+                        header.innerHTML = `
+                        <td colspan="7" class="py-2 ps-3 small text-uppercase text-dark">
+                            <i class="bi bi-folder2-open me-2"></i>${groupName} <span class="badge bg-dark ms-2">${groups[groupName].length}</span>
                         </td>
                     `;
-
-                    tableBody.insertBefore(header, groups[groupName][0]);
-
-                    header.querySelector('.group-selector').addEventListener('change', function() {
-                        groups[groupName].forEach(row => {
-                            const cb = row.querySelector('.item-checkbox');
-                            if (cb) cb.checked = this.checked;
-                        });
-                        updateMassActions();
+                        tableBody.insertBefore(header, groups[groupName][0]);
                     });
+                }
+                updateKPIs();
+            }
+
+            if (searchInput) searchInput.addEventListener('input', applyFilters);
+            if (groupBySelect) groupBySelect.addEventListener('change', applyFilters);
+            if (hideAssignedSwitch) hideAssignedSwitch.addEventListener('change', applyFilters);
+
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    document.querySelectorAll('.item-checkbox').forEach(cb => {
+                        const row = cb.closest('tr');
+                        if (row && row.style.display !== 'none') cb.checked = this.checked;
+                    });
+                    updateMassActions();
                 });
             }
-            updateCounter();
-        }
 
-        if (selectAll) {
-            selectAll.addEventListener('change', function() {
-                document.querySelectorAll('.item-checkbox').forEach(cb => {
-                    const row = cb.closest('tr');
-                    if (row && row.style.display !== 'none') cb.checked = this.checked;
+            if (tableBody) {
+                tableBody.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('item-checkbox')) updateMassActions();
                 });
-                updateMassActions();
-            });
-        }
-
-        if (tableBody) {
-            tableBody.addEventListener('change', (e) => {
-                if (e.target.classList.contains('item-checkbox')) updateMassActions();
-            });
-        }
-
-        function updateMassActions() {
-            const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
-            const count = checkedBoxes.length;
-            if (massActions) {
-                massActions.classList.toggle('d-none', count === 0);
-                const display = document.getElementById('selectedCount');
-                if (display) display.innerText = count;
             }
-        }
 
-        function updateCounter() {
-            const counter = document.getElementById('counterDisplay');
-            if (counter) {
-                const visibleCount = document.querySelectorAll('.logistics-row:not([style*="display: none"])').length;
-                counter.innerText = visibleCount;
+            function updateMassActions() {
+                const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+                const count = checkedBoxes.length;
+                if (massActions) {
+                    massActions.classList.toggle('d-none', count === 0);
+                    document.getElementById('selectedCount').innerText = count;
+                }
             }
+
+            // Carga dinámica de choferes y personal de apoyo (vacaciones/emergencias)
+            window.todosLosUsuarios = <?= json_encode($drivers ?? []) ?>;
+
+            function actualizarListaChoferes() {
+                if (!selectChofer) return;
+                const mostrarApoyo = switchApoyo ? switchApoyo.checked : false;
+                selectChofer.innerHTML = '<option value="">-- Seleccionar Responsable --</option>';
+
+                window.todosLosUsuarios.forEach(user => {
+                    // Si el switch está activo, mostramos también posiciones de apoyo/admin/logística
+                    if (mostrarApoyo || user.id_position == 6) {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.firstname} ${user.apellidos}`.trim();
+                        selectChofer.appendChild(option);
+                    }
+                });
+            }
+
+            if (switchApoyo) switchApoyo.addEventListener('change', actualizarListaChoferes);
+            actualizarListaChoferes();
+            updateKPIs();
+
+            // AJAX de envío para asignación limpia
+            if (formAsignacion) {
+                formAsignacion.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+
+                    fetch('index.php?page=assign_driver', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert("Error: " + (data.error || "No se pudo completar la asignación"));
+                            }
+                        })
+                        .catch(() => alert("Error de conexión con el servidor"));
+                });
+            }
+        });
+
+        function prepareAssignment() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            document.getElementById('selectedItemsInput').value = ids.join(',');
+            document.getElementById('modalSelectedCount').innerText = ids.length;
         }
 
-        if (formAsignacion) {
-            formAsignacion.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const btn = this.querySelector('button[type="submit"]');
-                const originalText = btn.innerHTML;
+        function quickAssign(itemId) {
+            document.getElementById('selectedItemsInput').value = itemId;
+            document.getElementById('modalSelectedCount').innerText = '1 (Individual)';
+        }
 
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
-                btn.disabled = true;
-
-                const formData = new FormData(this);
-                const selectedIds = formData.get('selected_items').split(',');
-                const choferNombre = selectChofer.options[selectChofer.selectedIndex].text;
-
-                fetch('index.php?page=assign_driver', {
+        function unassignDriver(itemId) {
+            if (!confirm('¿Deseas retirar la asignación a este ítem?')) return;
+            const formData = new FormData();
+            formData.append('item_id', itemId);
+            fetch('index.php?page=unassign_driver', {
                     method: 'POST',
                     body: formData
                 })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        const modalEl = document.getElementById('assignmentModal');
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-
-                        selectedIds.forEach(id => {
-                            const cb = document.querySelector(`.item-checkbox[value="${id}"]`);
-                            if (cb) {
-                                const row = cb.closest('tr');
-                                if (row.cells[4]) {
-                                    row.cells[4].innerHTML = `<span class="badge bg-info text-dark">${choferNombre}</span>`;
-                                }
-                                row.classList.add('is-assigned');
-                                row.classList.add('row-assign-out');
-                                setTimeout(() => applyFilters(), 500);
-                            }
-                        });
-
-                        this.reset();
-                        if (selectAll) selectAll.checked = false;
-                        updateMassActions();
-                    } else {
-                        alert("Error: " + (data.error || "No se pudo completar la operación"));
-                    }
-                })
-                .catch(err => alert("Error de conexión con el servidor"))
-                .finally(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
+                    if (data.success) location.reload();
+                    else alert(data.error);
                 });
-            });
         }
 
-        function actualizarListaChoferes() {
-            if (!selectChofer) return;
-            const mostrarApoyo = switchApoyo ? switchApoyo.checked : false;
-            selectChofer.innerHTML = '<option value="">-- Seleccionar Chofer --</option>';
-
-            const usuarios = window.todosLosUsuarios || [];
-            usuarios.forEach(user => {
-                if (mostrarApoyo || user.id_position == 6) {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = `${user.firstname} ${user.apellidos}`.trim();
-                    selectChofer.appendChild(option);
-                }
+        document.addEventListener('DOMContentLoaded', function() {
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            popoverTriggerList.map(function(popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
             });
-        }
-
-        if (switchApoyo) switchApoyo.addEventListener('change', actualizarListaChoferes);
-
-        window.todosLosUsuarios = <?= json_encode($drivers ?? []) ?>;
-        actualizarListaChoferes();
-        applyFilters();
-    });
-
-    function prepareAssignment() {
-        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-        const ids = Array.from(checkboxes).map(cb => cb.value);
-        document.getElementById('selectedItemsInput').value = ids.join(',');
-        document.getElementById('modalSelectedCount').innerText = ids.length;
-    }
-
-    function reportIncident(id, productName) {
-        document.getElementById('modal_item_id').value = id;
-        document.getElementById('incidentProductText').innerText = productName;
-        const modalEl = new bootstrap.Modal(document.getElementById('incidentModal'));
-        modalEl.show();
-    }
-
-    function unassignDriver(itemId) {
-        if (!confirm('¿Quitar asignación de este producto?')) return;
-
-        const container = document.getElementById(`assign-container-${itemId}`);
-        const formData = new FormData();
-        formData.append('item_id', itemId);
-
-        fetch('index.php?page=unassign_driver', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                container.innerHTML = '<span class="badge bg-light text-muted border">Pendiente</span>';
-                if (typeof applyFilters === "function") applyFilters();
-            } else {
-                alert(data.error);
-            }
         });
-    }
-</script>
-
-<script src="public/assets/js/logistic/saveIncident.js"></script>
+    </script>

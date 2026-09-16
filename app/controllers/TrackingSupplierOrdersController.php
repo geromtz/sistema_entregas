@@ -50,26 +50,51 @@ class TrackingSupplierOrdersController
      */
     public function updateTracking()
     {
+        if (session_status() === PHP_SESSION_NONE) session_start();
         header('Content-Type: application/json; charset=utf-8');
 
+        $userId = $_SESSION['user']['id'] ?? null;
         $itemId = $_POST['id_item_supplier_order'] ?? null;
-        if (!$itemId) {
-            echo json_encode(['success' => false, 'message' => 'Falta el ID del ítem.']);
+
+        if (!$itemId || !$userId) {
+            echo json_encode(['success' => false, 'message' => 'Faltan datos obligatorios o sesión no iniciada.']);
             return;
         }
 
         try {
             $trackingModel = new TrackingSupplierOrder();
+            $conn = $trackingModel->getConnection(); // Asegúrate de que tu modelo tenga este método de conexión PDO
 
-            $success = $trackingModel->updateTracking([
+            // 1️⃣ Consultar los datos ANTES de modificar el tracking
+            $stmtOld = $conn->prepare("SELECT * FROM tracking_supplier_orders WHERE id_item_supplier_order = ?");
+            $stmtOld->execute([$itemId]);
+            $oldData = $stmtOld->fetch(PDO::FETCH_ASSOC);
+
+            // 2️⃣ Datos nuevos recibidos
+            $newData = [
+                'tracking_number'  => $_POST['tracking_number'] ?? null,
+                'tracking_company' => $_POST['tracking_company'] ?? null,
+                'arrival_date'     => $_POST['arrival_date'] ?? null,
+            ];
+
+            $success = $trackingModel->updateTracking(array_merge($newData, [
                 'id_item_supplier_order' => $itemId,
-                'tracking_number'        => $_POST['tracking_number'] ?? null,
-                'tracking_company'       => $_POST['tracking_company'] ?? null,
-                'id_branch' => $item['origin_branch_id'] ?? null,
-                'arrival_date'           => $_POST['arrival_date'] ?? null,
-            ]);
+                'id_branch' => $oldData['id_branch'] ?? 1
+            ]));
 
             if ($success) {
+                // 3️⃣ 📝 REGISTRAR EN LA BITÁCORA DE AUDITORÍA
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel($conn);
+                $auditModel->log(
+                    (int)$userId,
+                    'UPDATE_TRACKING',
+                    'tracking_supplier_orders',
+                    (int)($oldData['id'] ?? $itemId),
+                    $oldData,
+                    $newData
+                );
+
                 echo json_encode(['success' => true, 'message' => 'Seguimiento actualizado correctamente.']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'No se pudo actualizar el seguimiento.']);

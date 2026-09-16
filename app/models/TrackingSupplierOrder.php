@@ -48,17 +48,19 @@ class TrackingSupplierOrder
      * 🔍 Obtener seguimiento por ID de ítem proveedor.
      */
     public function getTrackingByItem(int $itemId): ?array
-    {
-        $sql = "SELECT id, id_item_supplier_order, tracking_number, tracking_company, id_branch, arrival_date
-                FROM tracking_supplier_orders
-                WHERE id_item_supplier_order = ?
-                LIMIT 1";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$itemId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    }
+{
+    $sql = "
+        SELECT 
+            t.*, 
+            sa.branch AS branch_name
+        FROM tracking_supplier_orders AS t
+        LEFT JOIN supplier_adress AS sa ON sa.id = t.id_branch
+        WHERE t.id_item_supplier_order = ?
+    ";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$itemId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
 
     /**
      * 🔄 Actualizar información de seguimiento.

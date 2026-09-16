@@ -98,5 +98,21 @@ class User {
         }
     }
 
+    /**
+     * Obtener el ID del jefe o supervisor directo del usuario (usando parent_id)
+     */
+    public function getManagerId(int $userId): ?int
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT parent_id FROM users WHERE id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result && !empty($result['parent_id']) ? (int)$result['parent_id'] : null;
+        } catch (PDOException $e) {
+            error_log("Error getting manager ID: " . $e->getMessage());
+            return null;
+        }
+    }
 
 }

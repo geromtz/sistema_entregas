@@ -12,12 +12,12 @@ class LoginController {
     // Procesa login
     public function login() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
             $username = trim($_POST['username'] ?? '');
             $password = trim($_POST['password'] ?? '');
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'; // 👈 Capturamos la IP del intruso o usuario
 
             $userModel = new User();
-            $user = $userModel->validateUser($username, $password); // MD5
+            $user = $userModel->validateUser($username, $password); 
 
             if ($user) {
                 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -28,19 +28,42 @@ class LoginController {
                     'fullname' => $user['firstname'] . ' ' . $user['apellidos'],
                     'email' => $user['email'],
                     'id_position' => $user['id_position'],
-                    'is_leader'     => $user['is_leader'],
+                    'is_leader'   => $user['is_leader'],
                     'department_id' => $user['department_id'] ?? null
                 ];
 
-                // Redirigimos al dashboard
+                // 📝 REGISTRAR EN LA BITÁCORA: Login Exitoso
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel();
+                $auditModel->log(
+                    (int)$user['id'],
+                    'LOGIN_SUCCESS',
+                    'users',
+                    (int)$user['id'],
+                    null,
+                    ['ip' => $ipAddress, 'username' => $username]
+                );
+
                 header('Location: index.php?page=app');
                 exit;
 
             } else {
+                // 🚨 REGISTRAR EN LA BITÁCORA: Intento Fallido (Posible Fuerza Bruta)
+                // Como no hay un ID de usuario real, podemos guardar user_id = 0 o un campo especial
+                require_once __DIR__ . '/../models/AuditModel.php';
+                $auditModel = new AuditModel();
+                $auditModel->log(
+                    0, // 0 para intentos sin usuario válido
+                    'LOGIN_FAILED',
+                    'users',
+                    0,
+                    null,
+                    ['ip' => $ipAddress, 'attempted_username' => $username]
+                );
+
                 $error = "Usuario o contraseña incorrectos";
                 require_once __DIR__ . '/../views/login/login.php';
             }
-
         } else {
             $this->index();
         }

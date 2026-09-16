@@ -290,9 +290,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <td>${
                 editable
                   ? `<input type="text" class="form-control form-control-sm track-comp" value="${
-                      trk.tracking_company ?? trk.id_branch ?? ""
+                      trk.tracking_company ?? trk.branch_name ?? ""
                     }">`
-                  : (trk.tracking_company ?? trk.id_branch ?? "—")
+                  : (trk.tracking_company ?? trk.branch_name ?? "—")
               }</td>
               <td>${
                 editable
@@ -320,6 +320,9 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ===========================================================
      ✏️ EDICIÓN INLINE
   =========================================================== */
+  /* ===========================================================
+     ✏️ EDICIÓN INLINE
+  =========================================================== */
   async function enterEdit(card) {
     // cerrar otras tarjetas en edición
     if (activeEditingCard && activeEditingCard !== card)
@@ -343,8 +346,8 @@ document.addEventListener("DOMContentLoaded", () => {
     card.querySelector(".btn-cancel-edit")?.classList.remove("d-none");
 
     /* ==========================================================
-     🧾 AUTOCOMPLETADO DE PROVEEDOR
-  ========================================================== */
+       🧾 AUTOCOMPLETADO DE PROVEEDOR
+    ========================================================== */
     const supplierInput = card.querySelector(".supplier-input");
     const supplierHidden = card.querySelector(".supplier-id");
     const supplierList = card.querySelector(".supplier-list");
@@ -365,8 +368,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ==========================================================
-     🏢 AUTOCOMPLETADO DE SUCURSAL
-  ========================================================== */
+       🏢 AUTOCOMPLETADO DE SUCURSAL (CABECERA)
+    ========================================================== */
     const branchInput = card.querySelector(".branch-input");
     const branchHidden = card.querySelector(".branch-id");
     const branchList = card.querySelector(".branch-list");
@@ -388,12 +391,12 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    // cargar partidas en modo editable
+    // 1. Cargar partidas en modo editable
     await loadItemsIntoCard(card, true, true);
 
     /* ==========================================================
-     🔍 AUTOCOMPLETADO DE PRODUCTOS (EN MODO EDICIÓN)
-  ========================================================== */
+       🔍 AUTOCOMPLETADO DE PRODUCTOS (EN MODO EDICIÓN)
+    ========================================================== */
     card.querySelectorAll(".product-search").forEach((input) => {
       const td = input.closest("td");
       const hiddenId = td?.querySelector(".product-id");
@@ -403,7 +406,42 @@ document.addEventListener("DOMContentLoaded", () => {
         window.initProductAutocomplete(input, hiddenId, listDiv);
       }
     });
+
+    /* ==========================================================
+       🏢 AUTOCOMPLETADO PARA SUCURSALES EN LAS PARTIDAS (MODO EDICIÓN)
+    ========================================================== */
+    card.querySelectorAll(".track-comp").forEach((input) => {
+      const td = input.closest("td");
+      if (window.initBranchAutocomplete && input) {
+        let listDiv = td.querySelector(".branch-list-item");
+        if (!listDiv) {
+          td.style.position = "relative";
+          listDiv = document.createElement("div");
+          listDiv.className = "branch-list-item list-group position-absolute w-100 shadow-sm";
+          listDiv.style.zIndex = "1000";
+          td.appendChild(listDiv);
+        }
+
+        let hiddenBranchId = td.querySelector(".track-branch-id");
+        if (!hiddenBranchId) {
+          hiddenBranchId = document.createElement("input");
+          hiddenBranchId.type = "hidden";
+          hiddenBranchId.className = "track-branch-id";
+          td.appendChild(hiddenBranchId);
+        }
+
+        const supplierHiddenForBranch = card.querySelector(".supplier-id");
+        window.initBranchAutocomplete(
+          input,
+          hiddenBranchId,
+          listDiv,
+          supplierHiddenForBranch
+        );
+      }
+    });
   }
+
+  
 
   function exitEdit(card) {
     card.dataset.editing = "0";
