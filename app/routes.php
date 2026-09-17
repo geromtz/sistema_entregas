@@ -277,7 +277,11 @@ return [
         'method' => 'searchProducts',
         'public' => false
     ],
-
+    'create_quick_product' => [
+        'controller' => 'ProductsController',
+        'method'     => 'createQuickProduct',
+        'public'     => false
+    ],
     'logistic_pickups' => [
         'controller' => 'LogisticController',
         'method' => 'logisticPickups', // O el método que uses para las recolecciones de logística
@@ -422,5 +426,17 @@ return [
         'controller' => 'QuotationsController',
         'method'     => 'storeQuickContact',       
         'public'     => false
-    ]
+    ],
+    'print_quotation' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'printPdf',
+        'public'     => false
+    ],    
+    'preview_quotation_html' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'previewHtml',      
+        'public'     => false
+    ],
+
+    
 ];

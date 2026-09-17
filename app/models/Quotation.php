@@ -207,4 +207,62 @@ class Quotation
             ':email'        => $data['email']
         ]);
     }
+
+    /**
+     * Obtener una cotización por su ID con datos del cliente o prospecto
+     */
+    public function getQuotationById(int $id): ?array
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT 
+                    q.*,
+                    c.business_name AS customer_name,
+                    c.address AS customer_address,
+                    c.phone AS customer_phone,
+                    p.company_name AS prospect_name,
+                    p.contact_name AS prospect_contact,
+                    u.firstname, 
+                    u.apellidos
+                FROM quotations q
+                LEFT JOIN customers c ON c.id = q.id_customer
+                LEFT JOIN prospects p ON p.id = q.id_prospect
+                LEFT JOIN users u ON u.id = q.created_by
+                WHERE q.id = :id
+                LIMIT 1
+            ");
+            $stmt->execute([':id' => $id]);
+            $quotation = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $quotation ? $quotation : null;
+        } catch (PDOException $e) {
+            error_log("Error fetching quotation by ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Obtener las partidas (items) de una cotización
+     */
+    public function getItemsByQuotationId(int $quotationId): array
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT 
+                    qi.*,
+                    p.name AS product_name,
+                    p.part_number AS product_part_number,
+                    p.description AS product_description
+                FROM quotation_items qi
+                LEFT JOIN products p ON p.id = qi.product_id
+                WHERE qi.id_quotation = :quotationId
+                ORDER BY qi.item_number ASC
+            ");
+            $stmt->execute([':quotationId' => $quotationId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error fetching quotation items: " . $e->getMessage());
+            return [];
+        }
+    }
 }

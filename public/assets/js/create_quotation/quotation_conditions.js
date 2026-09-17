@@ -78,150 +78,102 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const previewBtn = document.getElementById("preview_quotation_btn");
     if (previewBtn) {
-        previewBtn.addEventListener("click", () => {
-            // 1. Recopilar datos generales de la pantalla
-            const destName = document.getElementById("search_target").value || "CLIENTE GENERAL";
-            const attentionTo = document.getElementById("attention_to_input").value || "SIN ESPECIFICAR";
-            const validityText = document.getElementById("validity_text_hidden")?.value || "Validez estándar";
-            const paymentTerms = document.getElementById("payment_terms_select")?.value || "Contado";
-            const currency = document.getElementById("currency_select")?.value || "MXN";
+        previewBtn.addEventListener("click", (e) => {
+            e.preventDefault();
 
-            // Si es crédito, obtenemos el texto completo de los días de crédito
-            let conditionsText = paymentTerms;
-            if (paymentTerms === "Credito") {
-                conditionsText = document.getElementById("credit_terms_hidden")?.value || "Crédito";
+            // 1. Obtener el TEXTO VISIBLE del cliente
+            const searchTargetInput = document.getElementById("search_target");
+            let clientName = searchTargetInput && searchTargetInput.value.trim() !== ""
+                ? searchTargetInput.value
+                : "No especificado";
+
+            const attentionInput = document.getElementById("attention_to_input");
+            const attentionTo = attentionInput ? attentionInput.value : "N/A";
+
+            // Capturar Moneda y Plazo de Crédito del formulario
+            const currencySelect = document.querySelector('select[name*="currency"], #currency_select');
+            const currencyText = currencySelect ? currencySelect.options[currencySelect.selectedIndex].text : "Pesos Mexicanos";
+
+            // Capturar el texto dinámico real de los hidden inputs que ya creamos en las condiciones
+            const creditHidden = document.getElementById("credit_terms_hidden");
+            const creditTerms = creditHidden ? creditHidden.value : "30 días de crédito";
+
+            // Asignarlas al modal
+            document.getElementById("prev_client_name").innerText = clientName;
+            document.getElementById("prev_attention_to").innerText = attentionTo;
+            document.getElementById("prev_currency").innerText = currencyText;
+            document.getElementById("prev_credit_terms").innerText = creditTerms;
+
+            // 2. Extraer las partidas de la interfaz de manera dinámica
+            const targetTbody = document.getElementById("prev_items_tbody");
+            targetTbody.innerHTML = "";
+
+            let calculatedSubtotal = 0;
+            let itemsFound = 0;
+
+            // Buscamos los contenedores de las filas (.item-row) para evaluarlas limpiamente
+            const itemRows = document.querySelectorAll('.item-row');
+
+            if (itemRows.length > 0) {
+                itemRows.forEach((row) => {
+                    const partInput = row.querySelector('input[name*="part_number"]');
+                    const partNum = partInput ? partInput.value.trim() : "";
+
+                    const totalPriceInput = row.querySelector('.total-price-input');
+                    const totalPriceVal = totalPriceInput ? (parseFloat(totalPriceInput.value) || 0) : 0;
+
+                    // 🛑 FILTRO CLAVE: Si la fila no tiene número de parte o su total es 0, LA IGNORAMOS por completo.
+                    if (partNum === '' || totalPriceVal === 0) return;
+
+                    const descInput = row.querySelector('input[name*="description"]');
+                    const description = descInput ? descInput.value : "Sin descripción";
+
+                    const qtyInput = row.querySelector('.qty-input');
+                    const qty = qtyInput ? (parseFloat(qtyInput.value) || 1) : 1;
+
+                    const priceInput = row.querySelector('.price-input');
+                    const unitPrice = priceInput ? (parseFloat(priceInput.value) || 0) : 0;
+
+                    const totalRow = qty * unitPrice;
+                    calculatedSubtotal += totalRow;
+                    itemsFound++;
+
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td class="text-center">${qty}</td>
+                        <td><strong>${partNum}</strong></td>
+                        <td>${description}</td>
+                        <td class="text-end">$ ${unitPrice.toFixed(2)}</td>
+                        <td class="text-end">$ ${totalRow.toFixed(2)}</td>
+                    `;
+                    targetTbody.appendChild(tr);
+                });
             }
 
-            // 2. Recopilar las partidas de la tabla de productos
-            let rowsHtml = "";
-            const itemRows = document.querySelectorAll(".item-row");
-
-            itemRows.forEach((row, idx) => {
-                const qty = row.querySelector(".qty-input")?.value || "1";
-                const partNumber = row.querySelector("input[name*='[part_number]']")?.value || "N/A";
-                const description = row.querySelector("input[name*='[description]']")?.value || "Sin descripción";
-                const unitPrice = parseFloat(row.querySelector(".price-input")?.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                const totalPrice = parseFloat(row.querySelector(".total-price-input")?.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                const deliveryTime = row.querySelector("input[name*='[delivery_time_days]']")?.value || "2-4 días";
-
-                rowsHtml += `
-                <tr>
-                    <td class="text-center border-end py-2">${qty}</td>
-                    <td class="border-end py-2 font-monospace">${partNumber}</td>
-                    <td class="border-end py-2">${description}</td>
-                    <td class="text-end border-end py-2">$ ${unitPrice}</td>
-                    <td class="text-end border-end py-2">$ ${totalPrice}</td>
-                    <td class="text-center py-2">${deliveryTime}</td>
-                </tr>
-            `;
-            });
-
-            // Rellenar filas vacías opcionales para que simule la hoja de excel formal si son pocas partidas
-            for (let i = itemRows.length; i < 6; i++) {
-                rowsHtml += `
-                <tr>
-                    <td class="border-end py-3">&nbsp;</td>
-                    <td class="border-end py-3"></td>
-                    <td class="border-end py-3"></td>
-                    <td class="border-end py-3"></td>
-                    <td class="border-end py-3"></td>
-                    <td class="py-3"></td>
-                </tr>
-            `;
+            if (itemsFound === 0) {
+                targetTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No hay partidas agregadas todavía.</td></tr>`;
             }
 
             // 3. Totales
-            const subtotal = document.getElementById("lbl_subtotal")?.textContent || "$0.00";
-            const iva = document.getElementById("lbl_iva")?.textContent || "$0.00";
-            const total = document.getElementById("lbl_total")?.textContent || "$0.00";
+            const iva = calculatedSubtotal * 0.16;
+            const total = calculatedSubtotal + iva;
 
-            // 4. Inyectar HTML estructurado estilo formato formal dentro del modal
-            const previewContainer = document.getElementById("quotation_preview_content");
-            previewContainer.innerHTML = `
-            <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000;">
-                <!-- Header -->
-                <div class="row border-bottom pb-3 mb-3 align-items-center">
-                    <div class="col-6">
-                        <h4 class="fw-bold text-danger mb-0" style="letter-spacing: 1px;">ERA COMPUTACIONAL, S.A. DE C.V.</h4>
-                        <p class="text-muted mb-0 small">RFC: ECO-100211-SZ1</p>
-                        <p class="text-muted mb-0 small">Vista Hermosa 403 Col. Linda Vista, Guadalupe, N.L. C.P. 67123</p>
-                        <p class="text-muted mb-0 small">Tel: 81-44-44-65-13 Cel: 81-19-38-10-40</p>
-                    </div>
-                    <div class="col-6 text-end">
-                        <h3 class="fw-bold text-dark fst-italic mb-1">COTIZACIÓN</h3>
-                        <h5 class="fw-bold text-danger mb-1">20102-26</h5>
-                        <p class="text-muted mb-0">${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                    </div>
-                </div>
+            document.getElementById("prev_subtotal").innerText = `$ ${calculatedSubtotal.toFixed(2)}`;
+            document.getElementById("prev_iva").innerText = `$ ${iva.toFixed(2)}`;
+            document.getElementById("prev_total").innerText = `$ ${total.toFixed(2)}`;
 
-                <!-- Cliente y At'n -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger text-uppercase mb-1">${destName}</h6>
-                    <p class="mb-0"><strong>At'n:</strong> ${attentionTo}</p>
-                </div>
-
-                <!-- Tabla de Artículos -->
-                <table class="table table-bordered border-dark mb-3" style="font-size: 11px;">
-                    <thead class="bg-danger text-white text-center">
-                        <tr>
-                            <th class="bg-secondary text-white py-2" style="width: 8%;">Cantidad</th>
-                            <th class="bg-secondary text-white py-2" style="width: 18%;">Número de Parte</th>
-                            <th class="bg-secondary text-white py-2" style="width: 36%;">Descripción</th>
-                            <th class="bg-secondary text-white py-2" style="width: 13%;">Precio/Unidad</th>
-                            <th class="bg-secondary text-white py-2" style="width: 13%;">Total</th>
-                            <th class="bg-secondary text-white py-2" style="width: 12%;">Tiempo de Entrega</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rowsHtml}
-                    </tbody>
-                </table>
-
-                <!-- Fila inferior: Notas y Totales -->
-                <div class="row mt-3">
-                    <div class="col-7">
-                        <p class="text-danger text-decoration-underline fw-bold mb-1" style="font-size: 11px;">${validityText.toUpperCase()}</p>
-                        <p class="mb-1"><strong>Condiciones de Pago:</strong> ${conditionsText}</p>
-                        <p class="mb-1"><strong>Moneda:</strong> ${currency === 'USD' ? 'Precios en Dolares' : 'Pesos Mexicanos (MXN)'}</p>
-                        <p class="mb-1">Precios sujetos a cambio sin previo aviso.</p>
-                        <p class="mb-3">Los Precios No Incluyen IVA</p>
-                        
-                        <div class="border-top pt-2 small">
-                            <p class="fw-bold mb-1">Cuenta Bancaria para Depósitos ó Transferencias Electrónicas</p>
-                            <div class="row">
-                                <div class="col-6">
-                                    <span class="text-muted">Banco:</span> <strong>BANREGIO</strong><br>
-                                    <span class="text-muted">Sucursal:</span> 042 Pablo Livas<br>
-                                    <span class="text-muted">Cuenta:</span> 042918800012<br>
-                                    <span class="text-muted">Clabe:</span> 058580429188000127
-                                </div>
-                                <div class="col-6">
-                                    <span class="text-muted">Banco:</span> <strong>BBVA BANCOMER</strong><br>
-                                    <span class="text-muted">Sucursal:</span> 4635 - Multiplaza Linda Vista<br>
-                                    <span class="text-muted">Cuenta:</span> 0117698313<br>
-                                    <span class="text-muted">Clabe:</span> 012580001176983131
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-5">
-                        <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
-                            <span>Sub-Total:</span>
-                            <strong>$ ${subtotal.replace('$', '')}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
-                            <span>I.V.A. 16%:</span>
-                            <strong>$ ${iva.replace('$', '')}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between border-bottom pb-1 mb-2 fw-bold fs-6">
-                            <span>Total:</span>
-                            <span class="text-success">$ ${total.replace('$', '')}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+            // 4. Apertura segura del modal
+            const modalEl = document.getElementById("quotationPreviewModal");
+            if (modalEl) {
+                let existingModal = bootstrap.Modal.getInstance(modalEl);
+                if (existingModal) {
+                    existingModal.dispose();
+                }
+                const myModal = new bootstrap.Modal(modalEl);
+                myModal.show();
+            }
         });
     }
+
+
 });
