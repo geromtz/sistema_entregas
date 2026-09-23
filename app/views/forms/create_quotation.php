@@ -13,7 +13,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1 text-uppercase fs-7 text-muted tracking-wider">
                     <li class="breadcrumb-item"><a href="index.php?page=my_quotations" class="text-decoration-none text-muted">Cotizaciones</a></li>
-                    <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Nueva Oportunidad</li>
+                    <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page"><?= !empty($isEdit) ? 'Editar Cotización' : 'Nueva Oportunidad' ?></li>
                 </ol>
             </nav>
             <h1 class="h3 fw-bold text-dark mb-0"><i class="bi bi-window-sidebar text-primary me-2"></i>Generador de Cotización y Costos</h1>
@@ -24,12 +24,18 @@
             </div>
             <div class="text-start pe-2">
                 <span class="d-block fs-8 text-muted lh-1">Vendedor</span>
+                <input type="hidden" name="created_by" value="<?= $formData['user_id'] ?? 1 ?>">
                 <span class="fw-semibold fs-7 text-dark"><?= htmlspecialchars($formData['user_fullname']) ?></span>
             </div>
         </div>
     </div>
 
     <form id="demo_quotation_form" class="row g-4">
+
+        <!-- 🔹 CAMPO OCULTO DE ID: Solo se pinta si estamos editando o recotizando -->
+        <?php if (!empty($quotation['id'])): ?>
+            <input type="hidden" name="id" value="<?= $quotation['id'] ?>">
+        <?php endif; ?>
 
         <!-- Columna Izquierda: Datos Generales & Destino -->
         <div class="col-xl-4">
@@ -40,13 +46,17 @@
                 <div class="bg-white border rounded-3 p-3 mb-3 shadow-2xs">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fs-7 text-muted fw-medium">Folio Interno</span>
-                        <span class="badge bg-danger-subtle text-danger fw-bold font-monospace px-2 py-1">16181010137-26</span>
-                        <input type="hidden" name="folio" value="16181010137-26">
+                        <span class="badge bg-danger-subtle text-danger fw-bold font-monospace px-2 py-1">
+                            <?= htmlspecialchars($formData['preview_folio']) ?>
+                        </span>
+                        <input type="hidden" name="folio" value="<?= htmlspecialchars($formData['preview_folio']) ?>">
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fs-7 text-muted fw-medium">Emisión</span>
-                        <span class="fw-semibold fs-7 text-dark"><?= date('d / M / Y') ?></span>
-                        <input type="hidden" name="quotation_date" value="<?= date('Y-m-d') ?>">
+                        <span class="fw-semibold fs-7 text-dark">
+                            <?= !empty($quotation['quotation_date']) ? date('d / M / Y', strtotime($quotation['quotation_date'])) : date('d / M / Y') ?>
+                        </span>
+                        <input type="hidden" name="quotation_date" value="<?= !empty($quotation['quotation_date']) ? $quotation['quotation_date'] : date('Y-m-d') ?>">
                     </div>
                 </div>
 
@@ -54,22 +64,27 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold fs-7 text-dark mb-2">Destino Comercial</label>
                     <div class="btn-group w-100 mb-3" role="group">
-                        <input type="radio" class="btn-check dest-radio" name="dest_type" id="type_customer" value="customer" checked>
+                        <?php
+                        $isProspectSelected = !empty($quotation['prospect_id']);
+                        ?>
+                        <input type="radio" class="btn-check dest-radio" name="dest_type" id="type_customer" value="customer" <?= !$isProspectSelected ? 'checked' : '' ?>>
                         <label class="btn btn-outline-primary" for="type_customer">Cliente</label>
 
-                        <input type="radio" class="btn-check dest-radio" name="dest_type" id="type_prospect" value="prospect">
+                        <input type="radio" class="btn-check dest-radio" name="dest_type" id="type_prospect" value="prospect" <?= $isProspectSelected ? 'checked' : '' ?>>
                         <label class="btn btn-outline-secondary" for="type_prospect">Prospecto</label>
                     </div>
                 </div>
 
-                <!-- Input dinámico  -->
+                <!-- Input dinámico (Búsqueda) -->
                 <div class="position-relative mb-3">
-                    <label class="form-label" id="search_label">Buscar Cliente</label>
-                    <input type="text" class="form-control" id="search_target" placeholder="Escribe para buscar..." autocomplete="off">
+                    <label class="form-label" id="search_label"><?= $isProspectSelected ? 'Buscar Prospecto' : 'Buscar Cliente' ?></label>
+                    <input type="text" class="form-control" id="search_target"
+                        value="<?= htmlspecialchars($quotation['customer_name'] ?? $quotation['prospect_name'] ?? '') ?>"
+                        placeholder="Escribe para buscar..." autocomplete="off">
 
                     <!-- Campos ocultos para el backend -->
-                    <input type="hidden" id="id_customer" name="id_customer" value="">
-                    <input type="hidden" id="id_prospect" name="id_prospect" value="">
+                    <input type="hidden" id="id_customer" name="id_customer" value="<?= $quotation['customer_id'] ?? '' ?>">
+                    <input type="hidden" id="id_prospect" name="id_prospect" value="<?= $quotation['prospect_id'] ?? '' ?>">
 
                     <!-- Contenedor de la lista flotante -->
                     <div id="search_list" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000;"></div>
@@ -78,72 +93,58 @@
                 <div class="mb-3 position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label fw-semibold fs-7 text-dark mb-0">Atención a (Contacto)</label>
-                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fs-8" id="btn_quick_contact" data-bs-toggle="modal" data-bs-target="#quickContactModal" disabled>
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 fs-8" id="btn_quick_contact" data-bs-toggle="modal" data-bs-target="#quickContactModal" <?= empty($quotation['customer_id']) ? 'disabled' : '' ?>>
                             <i class="bi bi-plus-circle me-1"></i>Nuevo Contacto
                         </button>
                     </div>
 
-                    <!-- Input visual de texto libre y autocompletado -->
-                    <input type="text" class="form-control form-control-sm shadow-2xs border-subtle" id="attention_to_input" name="attention_to" placeholder="Selecciona o escribe el contacto..." autocomplete="off" required value="">
+                    <input type="text" class="form-control form-control-sm shadow-2xs border-subtle" id="attention_to_input" name="attention_to" placeholder="Selecciona o escribe el contacto..." autocomplete="off" required value="<?= htmlspecialchars($quotation['attention_to'] ?? '') ?>">
 
-                    <!-- Contenedor flotante para las sugerencias de contactos del cliente -->
                     <div id="contact_search_list" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000;"></div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold fs-7 text-dark">Vigencia de Precios (Días)</label>
                     <div class="input-group input-group-sm shadow-2xs border-subtle rounded-2 overflow-hidden">
-                        <!-- Campo numérico limpio -->
-                        <input type="number" class="form-control form-control-sm border-0 text-center" id="validity_number" min="1" max="999" value="4" style="max-width: 70px;" required>
-
-                        <span class="input-group-text bg-light border-0 text-muted fs-8 flex-fill justify-content-start" id="validity_label">
+                        <!-- 🔹 IMPORTANTE: Añadimos name="validity_days" aquí para que viaja directo -->
+                        <input type="number" class="form-control form-control-sm border-0 text-center" id="validity_number" name="validity_days" min="1" max="999" value="<?= $quotation['validity_days'] ?? 4 ?>" style="max-width: 70px;" required>
+                        <span class="input-group-text bg-light border-0 text-muted fs-8 flex-fill justify-content-start">
                             días o hasta agotar existencias
                         </span>
-
-                        <!-- Input oculto con la frase completa inicial -->
-                        <input type="hidden" name="validity_text" id="validity_text_hidden" value="4 días o hasta agotar existencias">
                     </div>
                 </div>
 
                 <div class="row g-2 mb-2">
                     <div class="row g-3 mb-3">
-                        <!-- Condición de Pago -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold fs-7 text-dark">Condiciones de Pago</label>
                             <select class="form-select form-select-sm shadow-2xs border-subtle" id="payment_terms_select" name="payment_terms" required>
-                                <option value="Credito" selected>Crédito</option>
-                                <option value="Contado">Contado</option>
+                                <option value="Credito" <?= (isset($quotation['payment_conditions']) && $quotation['payment_conditions'] === 'Credito') ? 'selected' : '' ?>>Crédito</option>
+                                <option value="Contado" <?= (isset($quotation['payment_conditions']) && $quotation['payment_conditions'] === 'Contado') ? 'selected' : '' ?>>Contado</option>
                             </select>
                         </div>
 
-                        <!-- Moneda de la Cotización -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold fs-7 text-dark">Moneda</label>
                             <select class="form-select form-select-sm shadow-2xs border-subtle" id="currency_select" name="currency">
-                                <option value="MXN" selected>Pesos Mexicanos (MXN)</option>
-                                <option value="USD">Dólares Estadounidenses (USD)</option>
+                                <option value="MXN" <?= (isset($quotation['currency']) && $quotation['currency'] === 'MXN') ? 'selected' : '' ?>>Pesos Mexicanos (MXN)</option>
+                                <option value="USD" <?= (isset($quotation['currency']) && $quotation['currency'] === 'USD') ? 'selected' : '' ?>>Dólares Estadounidenses (USD)</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- 🔹 Días de Crédito Dinámicos (Oculto por defecto si inicia en contado, o visible si está en crédito) -->
+                    <!-- Plazo de Crédito -->
                     <div class="mb-3" id="credit_days_container">
                         <label class="form-label fw-semibold fs-7 text-dark">Plazo de Crédito</label>
                         <div class="input-group input-group-sm shadow-2xs border-subtle rounded-2 overflow-hidden" style="max-width: 280px;">
-                            <!-- Input numérico corto para los días -->
-                            <input type="number" class="form-control form-control-sm border-0 text-center" id="credit_days_number" min="1" max="365" value="30" style="max-width: 70px;">
-
-                            <!-- Leyenda dinámica (día / días) -->
-                            <span class="input-group-text bg-light border-0 text-muted fs-8 flex-fill justify-content-start" id="credit_days_label">
+                            <!-- 🔹 IMPORTANTE: Añadimos name="credit_days" aquí -->
+                            <input type="number" class="form-control form-control-sm border-0 text-center" id="credit_days_number" name="credit_days" min="1" max="365" value="<?= $quotation['credit_days'] ?? 30 ?>" style="max-width: 70px;">
+                            <span class="input-group-text bg-light border-0 text-muted fs-8 flex-fill justify-content-start">
                                 días de crédito
                             </span>
-
-                            <!-- Input oculto que concatena y manda la frase completa al backend -->
-                            <input type="hidden" name="credit_terms_text" id="credit_terms_hidden" value="30 días de crédito">
                         </div>
                     </div>
 
-                    <!-- Contenedor dinámico para el Tipo de Cambio (Oculto por defecto, aparece si eligen USD) -->
                     <div class="mb-3 d-none" id="exchange_rate_container">
                         <label class="form-label fw-semibold fs-7 text-dark">Tipo de Cambio (USD a MXN)</label>
                         <div class="input-group input-group-sm shadow-2xs border-subtle rounded-2 overflow-hidden" style="max-width: 250px;">
@@ -151,7 +152,6 @@
                             <input type="number" step="0.0001" class="form-control form-control-sm border-0" id="exchange_rate_input" name="exchange_rate" value="" placeholder="Ej. 19.1750">
                             <span class="input-group-text bg-light border-0 text-muted">MXN</span>
                         </div>
-                        <div class="form-text fs-8 text-muted">Reemplaza el viejo truco del Excel; este valor se usará para la conversión limpia de tus costos.</div>
                     </div>
                 </div>
             </div>
@@ -166,33 +166,126 @@
                             <i class="bi bi-cart-check me-2"></i>Partidas, Costos &amp; Logística
                         </h5>
 
-                        <!-- Contenedor de botones coloridos tipo pastilla -->
+                        <!-- Botones de acción rápida -->
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <!-- Nuevo Producto (Azul brillante sutil) -->
                             <button type="button" class="btn btn-sm bg-primary-subtle text-primary border-0 fw-semibold px-2 py-1 fs-8" id="btn_quick_product" data-bs-toggle="modal" data-bs-target="#quickProductModal">
                                 <i class="bi bi-plus-circle me-1"></i>+ Producto
                             </button>
-
-                            <!-- Nuevo Proveedor (Verde esmeralda sutil) -->
                             <button type="button" class="btn btn-sm bg-success-subtle text-success border-0 fw-semibold px-2 py-1 fs-8" id="btn_quick_supplier" data-bs-toggle="modal" data-bs-target="#quickSupplierModal">
                                 <i class="bi bi-plus-circle me-1"></i>+ Proveedor
                             </button>
-
-                            <!-- Nueva Sucursal (Morado/Índigo sutil) -->
                             <button type="button" class="btn btn-sm bg-info-subtle text-info-emphasis border-0 fw-semibold px-2 py-1 fs-8" id="btn_quick_branch">
                                 <i class="bi bi-plus-circle me-1"></i>+ Sucursal
                             </button>
-
-                            <!-- Botón principal para añadir renglón -->
                             <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold shadow-2xs ms-2" id="add_item_btn">
                                 <i class="bi bi-plus-lg me-1"></i> Añadir Partida
                             </button>
                         </div>
                     </div>
 
-                    <!-- Contenedor Dinámico de Renglones -->
+                    <!-- Contenedor Dinámico de Renglones (Renderizado por PHP en Edición / JS en Creación) -->
                     <div id="items_container" class="d-flex flex-column gap-3 mb-4">
-                        <!-- Inyectado por JS -->
+                        <?php if (!empty($isEdit) && !empty($items)): ?>
+                            <?php foreach ($items as $index => $item): ?>
+                                <div class="item-row card border shadow-2xs p-3 rounded-3 position-relative bg-white mb-3" data-index="<?= $index ?>">
+                                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3 remove-item-btn" aria-label="Eliminar"></button>
+
+                                    <!-- Fila Superior: Datos Comerciales Visibles -->
+                                    <div class="row g-2 align-items-center mb-3">
+                                        <div class="col-auto">
+                                            <span class="badge bg-secondary-subtle text-secondary font-monospace row-number px-2 py-1">#<?= $index + 1 ?></span>
+                                            <input type="hidden" class="item-number-input" name="items[<?= $index ?>][item_number]" value="<?= $index + 1 ?>">
+                                        </div>
+
+                                        <!-- PRODUCTO / NÚMERO DE PARTE -->
+                                        <div class="col-md-3 position-relative">
+                                            <label class="form-label fs-8 text-muted mb-0">No. Parte</label>
+                                            <input type="text" class="form-control form-control-sm font-monospace product-search-part" name="items[<?= $index ?>][part_number]" value="<?= htmlspecialchars($item['part_number'] ?? $item['product_part_number'] ?? '') ?>" placeholder="Buscar no. parte..." autocomplete="off" required>
+                                            <input type="hidden" class="product-id" name="items[<?= $index ?>][product_id]" value="<?= $item['product_id'] ?? '' ?>">
+                                            <div class="product-list-part list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                        </div>
+
+                                        <!-- DESCRIPCIÓN DEL PRODUCTO -->
+                                        <div class="col-md-5 position-relative">
+                                            <label class="form-label fs-8 text-muted mb-0">Descripción del Producto</label>
+                                            <input type="text" class="form-control form-control-sm product-search-desc" name="items[<?= $index ?>][description]" value="<?= htmlspecialchars($item['description'] ?? $item['product_description'] ?? '') ?>" placeholder="Buscar Descripción..." autocomplete="off" required>
+                                            <div class="product-list-desc list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label class="form-label fs-8 text-muted mb-0">Cant.</label>
+                                            <input type="number" class="form-control form-control-sm qty-input" name="items[<?= $index ?>][quantity]" value="<?= $item['quantity'] ?? 1 ?>" min="1" required>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cocina Interna de Costos & Logística -->
+                                    <div class="bg-light-subtle border border-warning-subtle rounded-3 p-3 mt-1">
+                                        <div class="row g-2">
+                                            <!-- Bloque Financiero -->
+                                            <div class="col-md-6 border-end">
+                                                <span class="d-block fs-8 fw-bold text-danger text-uppercase mb-2"><i class="bi bi-calculator me-1"></i> Márgenes y Costos</span>
+                                                <div class="row g-2">
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-muted mb-0">Costo Unit. ($)</label>
+                                                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle cost-input" name="items[<?= $index ?>][purchase_unit_cost]" value="<?= htmlspecialchars($item['purchase_unit_cost'] ?? $item['cost'] ?? '0.00') ?>" required>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-muted mb-0">% Utilidad</label>
+                                                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle profit-input" name="items[<?= $index ?>][profit_percentage]" value="<?= htmlspecialchars($item['profit_percentage'] ?? $item['profit'] ?? '0.00') ?>" required>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-dark fw-medium mb-0">Precio Venta Unit.</label>
+                                                        <input type="number" step="0.01" class="form-control form-control-sm bg-white fw-bold text-success price-input" name="items[<?= $index ?>][unit_price]" value="<?= htmlspecialchars($item['unit_price'] ?? $item['price'] ?? '0.00') ?>" required>
+                                                        <input type="hidden" class="total-price-input" name="items[<?= $index ?>][total_price]" value="<?= htmlspecialchars($item['total_price'] ?? '0.00') ?>">
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-muted mb-0">Utilidad Neta ($)</label>
+                                                        <input type="text" class="form-control form-control-sm bg-white text-muted net-profit-display" readonly value="$<?= number_format($item['net_profit'] ?? 0, 2) ?>">
+                                                        <input type="hidden" class="net-profit-input" name="items[<?= $index ?>][net_profit]" value="<?= htmlspecialchars($item['net_profit'] ?? '0.00') ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Bloque Logístico -->
+                                            <div class="col-md-6 ps-md-3">
+                                                <span class="d-block fs-8 fw-bold text-primary text-uppercase mb-2"><i class="bi bi-truck me-1"></i> Logística y Abastecimiento</span>
+                                                <div class="row g-2">
+                                                    <div class="col-6 position-relative">
+                                                        <label class="form-label fs-8 text-muted mb-0">Proveedor / Mayorista</label>
+                                                        <input type="text" class="form-control form-control-sm supplier-search" value="<?= htmlspecialchars($item['supplier_name'] ?? '') ?>" placeholder="Buscar proveedor..." autocomplete="off">
+                                                        <input type="hidden" class="supplier-id" name="items[<?= $index ?>][id_supplier]" value="<?= $item['id_supplier'] ?? '' ?>">
+                                                        <div class="supplier-list list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                                    </div>
+
+                                                    <div class="col-md-4 position-relative">
+                                                        <label class="form-label fs-8 text-muted mb-0">Sucursal Prov.</label>
+                                                        <select class="form-select form-select-sm branch-select" name="items[<?= $index ?>][id_branch]" required>
+                                                            <option value="">Seleccione sucursal...</option>
+                                                            <?php if (!empty($item['id_branch'])): ?>
+                                                                <option value="<?= $item['id_branch'] ?>" selected>Sucursal ID: <?= $item['id_branch'] ?></option>
+                                                            <?php endif; ?>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-muted mb-0">Flete Unitario ($)</label>
+                                                        <input type="number" step="0.01" class="form-control form-control-sm freight-input" name="items[<?= $index ?>][freight_cost]" value="<?= $item['freight_cost'] ?? '0.00' ?>">
+                                                    </div>
+
+                                                    <div class="col-6">
+                                                        <label class="form-label fs-8 text-muted mb-0">Tiempo de Entrega</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" min="1" class="form-control form-control-sm delivery-days-number" value="<?= intval($item['delivery_time_days'] ?? 2) ?>" required>
+                                                            <span class="input-group-text delivery-days-label" style="font-size: 10px;">DÍAS</span>
+                                                        </div>
+                                                        <input type="hidden" class="delivery-terms-hidden" name="items[<?= $index ?>][delivery_time_days]" value="<?= htmlspecialchars($item['delivery_time_days'] ?? '2 DÍAS') ?>">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -207,25 +300,51 @@
                         <div class="col-md-5">
                             <div class="d-flex justify-content-between mb-1 fs-7">
                                 <span class="text-muted">Subtotal:</span>
-                                <span class="fw-semibold text-dark" id="lbl_subtotal">$0.00</span>
-                                <input type="hidden" name="subtotal" id="input_subtotal" value="0.00">
+                                <span class="fw-semibold text-dark" id="lbl_subtotal">$<?= number_format($quotation['subtotal'] ?? 0, 2) ?></span>
+                                <input type="hidden" name="subtotal" id="input_subtotal" value="<?= $quotation['subtotal'] ?? '0.00' ?>">
                             </div>
                             <div class="d-flex justify-content-between mb-2 fs-7">
                                 <span class="text-muted">IVA (16%):</span>
-                                <span class="fw-semibold text-dark" id="lbl_iva">$0.00</span>
-                                <input type="hidden" name="tax_iva" id="input_iva" value="0.00">
+                                <span class="fw-semibold text-dark" id="lbl_iva">$<?= number_format($quotation['tax_iva'] ?? 0, 2) ?></span>
+                                <input type="hidden" name="tax_iva" id="input_iva" value="<?= $quotation['tax_iva'] ?? '0.00' ?>">
                             </div>
                             <div class="d-flex justify-content-between mb-3 fs-6 border-top pt-2">
                                 <span class="fw-bold text-dark">Total Venta:</span>
-                                <span class="fw-bold text-success fs-5" id="lbl_total">$0.00</span>
-                                <input type="hidden" name="total" id="input_total" value="0.00">
+                                <span class="fw-bold text-success fs-5" id="lbl_total">$<?= number_format($quotation['total'] ?? 0, 2) ?></span>
+                                <input type="hidden" name="total" id="input_total" value="<?= $quotation['total'] ?? '0.00' ?>">
                             </div>
-                            <button type="button" id="preview_quotation_btn" class="btn btn-outline-secondary">
-                                <i class="bi bi-eye"></i> Vista Previa de Cotización
-                            </button>
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-semibold shadow-sm">
-                                <i class="bi bi-check2-circle me-1"></i> Guardar y Emitir Cotización
-                            </button>
+                            <div class="d-grid gap-2">
+                                <button type="button" id="preview_quotation_btn" class="btn btn-outline-secondary mb-2 w-100">
+                                    <i class="bi bi-eye"></i> Vista Previa de Cotización
+                                </button>
+                                <?php if (empty($isEdit)): ?>
+                                    <!-- ESCENARIO A: Cotización Nueva -->
+                                    <button type="submit" name="action" value="save_draft" class="btn btn-secondary rounded-pill py-2 fw-semibold shadow-sm">
+                                        <i class="bi bi-file-earmark me-1"></i> Guardar como Borrador
+                                    </button>
+                                    <button type="submit" name="action" value="emit" class="btn btn-primary rounded-pill py-2 fw-semibold shadow-sm">
+                                        <i class="bi bi-send-check me-1"></i> Guardar y Emitir al Cliente
+                                    </button>
+
+                                <?php elseif (($quotation['status'] ?? 'Borrador') === 'Borrador'): ?>
+                                    <!-- ESCENARIO B: Editando un Borrador existente -->
+                                    <button type="submit" name="action" value="update_draft" class="btn btn-primary rounded-pill py-2 fw-semibold shadow-sm">
+                                        <i class="bi bi-check2-circle me-1"></i> Actualizar Borrador
+                                    </button>
+                                    <button type="submit" name="action" value="emit" class="btn btn-success rounded-pill py-2 fw-semibold shadow-sm">
+                                        <i class="bi bi-send-check me-1"></i> Emitir Cotización
+                                    </button>
+
+                                <?php else: ?>
+                                    <!-- ESCENARIO C: Cotización ya emitida, vencida, reemplazada o cerrada -->
+                                    <div class="alert alert-warning text-center py-2 mb-2 small">
+                                        Esta cotización ya fue emitida. Los cambios requieren una nueva versión.
+                                    </div>
+                                    <a href="index.php?page=clone_quotation_version&id=<?= $quotation['id'] ?? 0 ?>" class="btn btn-warning rounded-pill py-2 fw-semibold shadow-sm text-center text-decoration-none d-block">
+                                        <i class="bi bi-files me-1"></i> Re-cotizar (Crear Nueva Versión)
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,21 +353,17 @@
     </form>
 </div>
 
-
-
-<!-- Template Pro para Partida con Cocina de Costos y Logística -->
+<!-- Template Pro para Partida con Cocina de Costos y Logística (Usado por JS al crear nuevas filas) -->
 <template id="item_row_template">
     <div class="item-row card border shadow-2xs p-3 rounded-3 position-relative bg-white mb-3">
         <button type="button" class="btn-close position-absolute top-0 end-0 m-3 remove-item-btn" aria-label="Eliminar"></button>
 
-        <!-- Fila Superior: Datos Comerciales Visibles -->
         <div class="row g-2 align-items-center mb-3">
             <div class="col-auto">
                 <span class="badge bg-secondary-subtle text-secondary font-monospace row-number px-2 py-1">#1</span>
                 <input type="hidden" class="item-number-input" name="items[INDEX][item_number]" value="1">
             </div>
 
-            <!-- PRODUCTO / NÚMERO DE PARTE (AUTOCOMPLETE) -->
             <div class="col-md-3 position-relative">
                 <label class="form-label fs-8 text-muted mb-0">No. Parte</label>
                 <input type="text" class="form-control form-control-sm font-monospace product-search-part" name="items[INDEX][part_number]" placeholder="Buscar no. parte..." autocomplete="off" required>
@@ -256,7 +371,6 @@
                 <div class="product-list-part list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
             </div>
 
-            <!-- DESCRIPCIÓN DEL PRODUCTO (AUTOCOMPLETE COMPLEMENTARIO) -->
             <div class="col-md-5 position-relative">
                 <label class="form-label fs-8 text-muted mb-0">Descripción del Producto</label>
                 <input type="text" class="form-control form-control-sm product-search-desc" name="items[INDEX][description]" placeholder="Buscar Descripción..." autocomplete="off" required disabled>
@@ -269,10 +383,8 @@
             </div>
         </div>
 
-        <!-- Cocina Interna de Costos & Logística -->
         <div class="bg-light-subtle border border-warning-subtle rounded-3 p-3 mt-1">
             <div class="row g-2">
-                <!-- Bloque Financiero -->
                 <div class="col-md-6 border-end">
                     <span class="d-block fs-8 fw-bold text-danger text-uppercase mb-2"><i class="bi bi-calculator me-1"></i> Márgenes y Costos</span>
                     <div class="row g-2">
@@ -282,7 +394,7 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label fs-8 text-muted mb-0">% Utilidad</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle profit-input" name="items[INDEX][profit_percentage]" value="40.00" required>
+                            <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle profit-input" name="items[INDEX][profit_percentage]" value="0.00" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label fs-8 text-dark fw-medium mb-0">Precio Venta Unit.</label>
@@ -297,11 +409,9 @@
                     </div>
                 </div>
 
-                <!-- Bloque Logístico con Autocomplete de Proveedor y Sucursal -->
                 <div class="col-md-6 ps-md-3">
                     <span class="d-block fs-8 fw-bold text-primary text-uppercase mb-2"><i class="bi bi-truck me-1"></i> Logística y Abastecimiento</span>
                     <div class="row g-2">
-                        <!-- PROVEEDOR / MAYORISTA (AUTOCOMPLETE) -->
                         <div class="col-6 position-relative">
                             <label class="form-label fs-8 text-muted mb-0">Proveedor / Mayorista</label>
                             <input type="text" class="form-control form-control-sm supplier-search" placeholder="Buscar proveedor..." autocomplete="off">
@@ -309,7 +419,6 @@
                             <div class="supplier-list list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
                         </div>
 
-                        <!-- SUCURSAL DEL PROVEEDOR (Desplegable inteligente) -->
                         <div class="col-md-4 position-relative">
                             <label class="form-label fs-8 text-muted mb-0">Sucursal Prov.</label>
                             <select class="form-select form-select-sm branch-select" name="items[INDEX][id_branch]" required>
@@ -322,7 +431,6 @@
                             <input type="number" step="0.01" class="form-control form-control-sm freight-input" name="items[INDEX][freight_cost]" value="0.00">
                         </div>
 
-                        <!-- Tiempo de Entrega Numérico Dinámico -->
                         <div class="col-6">
                             <label class="form-label fs-8 text-muted mb-0">Tiempo de Entrega</label>
                             <div class="input-group input-group-sm">
@@ -338,9 +446,8 @@
     </div>
 </template>
 
-<!-- ========================================== -->
+<!-- Modales -->
 <!-- MODAL: CREAR PRODUCTO RÁPIDO -->
-<!-- ========================================== -->
 <div class="modal fade" id="quickProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -378,9 +485,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
 <!-- MODAL: CREAR PROVEEDOR RÁPIDO -->
-<!-- ========================================== -->
 <div class="modal fade" id="quickSupplierModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -408,9 +513,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
 <!-- MODAL: CREAR SUCURSAL RÁPIDA -->
-<!-- ========================================== -->
 <div class="modal fade" id="quickBranchModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -420,16 +523,12 @@
             </div>
             <div class="modal-body">
                 <form id="quickBranchForm">
-                    <!-- Campo oculto que guarda el ID del proveedor seleccionado en el modal -->
                     <input type="hidden" id="modal_id_supplier" name="id_supplier">
-
-                    <!-- NUEVO: Buscador de Proveedor dentro del modal para evitar adivinanzas -->
                     <div class="mb-3 position-relative">
                         <label class="form-label small fw-bold">Proveedor / Mayorista *</label>
                         <input type="text" class="form-control form-control-sm" id="modal_supplier_search" placeholder="Buscar proveedor..." autocomplete="off" required>
                         <div id="modal_supplier_list" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050;"></div>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Nombre de la Sucursal (Ej. Monterrey / Centro) *</label>
                         <input type="text" class="form-control form-control-sm" name="branch" required autocomplete="off">
@@ -448,7 +547,7 @@
     </div>
 </div>
 
-<!-- ================= MODAL RÁPIDO PARA NUEVO CONTACTO (OCULTO) ================= -->
+<!-- MODAL RÁPIDO PARA NUEVO CONTACTO -->
 <div class="modal fade" id="quickContactModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -458,9 +557,7 @@
             </div>
             <div class="modal-body">
                 <form id="quick_contact_form">
-                    <!-- Input oculto para asociar el contacto al ID del cliente actual -->
                     <input type="hidden" id="qc_customer_id" name="customer_id" value="">
-
                     <div class="mb-3">
                         <label class="form-label fs-7 fw-semibold text-dark">Nombre del Contacto *</label>
                         <input type="text" class="form-control form-control-sm shadow-2xs" name="contact_name" placeholder="Ej. Lic. María Fernández" required>
@@ -489,7 +586,6 @@
     </div>
 </div>
 
-
 <!-- Modal de Vista Previa de Borrador -->
 <div class="modal fade" id="quotationPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -500,9 +596,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
             <div class="modal-body bg-light p-4">
-                <!-- Tarjeta de Datos Generales -->
                 <div class="card mb-3 shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="text-uppercase text-muted fw-bold mb-2" style="font-size: 11px;">Información del Cliente y Condiciones</h6>
@@ -512,8 +606,6 @@
                         <p class="mb-0"><strong>Plazo de Crédito:</strong> <span id="prev_credit_terms">-</span></p>
                     </div>
                 </div>
-
-                <!-- Tarjeta de Partidas Capturadas -->
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="text-uppercase text-muted fw-bold mb-3" style="font-size: 11px;">Partidas Agregadas</h6>
@@ -529,12 +621,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="prev_items_tbody">
-                                    <!-- Se llenará dinámicamente con JS -->
                                 </tbody>
                             </table>
                         </div>
-
-                        <!-- Totales Rápidos -->
                         <div class="row justify-content-end mt-3">
                             <div class="col-md-5 text-end" style="font-size: 13px;">
                                 <p class="mb-1">Sub-Total: <strong id="prev_subtotal">$ 0.00</strong></p>
@@ -545,14 +634,12 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer bg-white">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar y Seguir Editando</button>
             </div>
         </div>
     </div>
 </div>
-
 
 <!-- Contenedor para alertas -->
 <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
@@ -579,8 +666,30 @@
     }
 </style>
 
-<!-- Tus scripts organizados y linkeados limpiamente -->
+
+
+<!-- Scripts -->
 <script src="public/assets/js/modules/global_alerts.js"></script>
 <script src="public/assets/js/create_quotation/quotation_dest_autocomplete.js"></script>
 <script src="public/assets/js/create_quotation/quotation_conditions.js"></script>
 <script src="public/assets/js/create_quotation/quotation_items.js"></script>
+<script src="public/assets/js/create_quotation/quotation_form_submit.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemsContainer = document.getElementById('items_container');
+        if (!itemsContainer) return;
+
+        const isEditMode = <?= !empty($isEdit) ? 'true' : 'false' ?>;
+        const existingRows = itemsContainer.querySelectorAll('.item-row');
+
+        if (isEditMode) {
+            console.log("Modo Edición detectado: Partidas cargadas desde la BD.");
+        } else {
+            // Si es creación y no hay filas, disparamos la primera en blanco de forma segura
+            if (existingRows.length === 0 && typeof addItemRow === 'function') {
+                addItemRow();
+            }
+        }
+    });
+</script>

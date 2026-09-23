@@ -18,6 +18,25 @@ document.addEventListener("DOMContentLoaded", () => {
     let timeout = null;
     let currentItems = [];
 
+    // 🔹 DETECCIÓN MODO EDICIÓN / RE-COTIZACIÓN: Si ya viene un cliente o prospecto seleccionado desde PHP
+    if (customerIdInput && customerIdInput.value.trim() !== "") {
+        document.getElementById("type_customer").checked = true;
+        currentEndpoint = "index.php?page=search_customer";
+        searchLabel.textContent = "Cliente Seleccionado";
+        if (btnQuickContact) btnQuickContact.disabled = false;
+        if (qcCustomerId) qcCustomerId.value = customerIdInput.value;
+        
+        // 🔹 CORRECCIÓN: Cargar los contactos del cliente precargado para que el autocompletado de "Atención a" funcione
+        handleDestinoSeleccionado('customer', customerIdInput.value);
+
+    } else if (prospectIdInput && prospectIdInput.value.trim() !== "") {
+        document.getElementById("type_prospect").checked = true;
+        currentEndpoint = "index.php?page=search_prospect";
+        searchLabel.textContent = "Prospecto Seleccionado";
+        if (btnQuickContact) btnQuickContact.disabled = true;
+        if (qcCustomerId) qcCustomerId.value = "";
+    }
+
     // ==========================================================
     // ⌨️ FUNCIÓN GENÉRICA DE NAVEGACIÓN POR TECLADO (UNIVERSAL)
     // ==========================================================
@@ -167,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (btnQuickContact) btnQuickContact.disabled = false;
             if (qcCustomerId) qcCustomerId.value = item.id;
 
-            // Para clientes, consultamos sus múltiples contactos
             await handleDestinoSeleccionado(tipo, item.id);
         } else {
             prospectIdInput.value = item.id;
@@ -177,7 +195,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (btnQuickContact) btnQuickContact.disabled = true;
             if (qcCustomerId) qcCustomerId.value = "";
 
-            // 🚀 Para prospectos, rellenamos el contacto de inmediato con el campo que viene en el objeto
             currentClientContacts = [];
             if (inputAttention) {
                 inputAttention.value = item.contact_name || "";
@@ -200,25 +217,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (Array.isArray(contactos) && contactos.length > 0) {
                     currentClientContacts = contactos;
-                    const principal = contactos.find(c => c.is_primary == 1) || contactos[0];
-                    inputAttention.value = principal.contact_name;
+                    // Solo sobreescribimos la atención si es nuevo, para no borrar el contacto existente al editar
+                    if (!inputAttention.value.trim()) {
+                        const principal = contactos.find(c => c.is_primary == 1) || contactos[0];
+                        inputAttention.value = principal.contact_name;
+                    }
                 } else {
                     currentClientContacts = [];
-                    inputAttention.value = "";
-                    inputAttention.placeholder = "Escribe la persona de atención (Sin contactos registrados)";
                 }
             } catch (err) {
                 console.error("Error al cargar contactos del cliente:", err);
             }
         } else {
             currentClientContacts = [];
-            try {
-                const res = await fetch(`index.php?page=get_prospect_detail&prospect_id=${id}`);
-                const prospecto = await res.json();
-                inputAttention.value = prospecto.contact_name || "";
-            } catch (err) {
-                console.error("Error al cargar detalle del prospecto:", err);
-            }
         }
     }
 
@@ -305,10 +316,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        // 🚀 ACTIVAR NAVEGACIÓN POR TECLADO UNIVERSAL EN EL CAMPO DE CONTACTOS
         setupKeyboardNavigation(attentionInput, contactSearchList);
 
-        // Ocultar lista si hace click fuera
         document.addEventListener("click", (e) => {
             if (!attentionInput.contains(e.target) && !contactSearchList.contains(e.target)) {
                 contactSearchList.innerHTML = "";

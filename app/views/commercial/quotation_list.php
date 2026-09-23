@@ -41,18 +41,18 @@
                                     <td><strong>$<?= number_format($quot['total'], 2) ?> <?= htmlspecialchars($quot['currency']) ?></strong></td>
                                     <td>
                                         <?php 
+                                            // Evaluamos el campo 'status' (Enum de la BD)
+                                            $currentStatus = $quot['status'] ?? 'Borrador';
                                             $badgeBg = 'bg-secondary';
-                                            if ($quot['id_status'] == 1) $badgeBg = 'bg-warning text-dark'; // Borrador
-                                            if ($quot['id_status'] == 2) $badgeBg = 'bg-info text-dark';    // Enviada
-                                            if ($quot['id_status'] == 3) $badgeBg = 'bg-success';          // Aprobada
-                                            if ($quot['id_status'] == 4) $badgeBg = 'bg-danger';           // Rechazada
-                                            if ($quot['id_status'] == 5) $badgeBg = 'bg-primary';          // Convertida
+
+                                            if ($currentStatus === 'Borrador') $badgeBg = 'bg-warning text-dark';
+                                            if ($currentStatus === 'Enviada') $badgeBg = 'bg-info text-dark';
+                                            if ($currentStatus === 'Aprobada') $badgeBg = 'bg-success';
+                                            if ($currentStatus === 'Rechazada') $badgeBg = 'bg-danger';
+                                            if ($currentStatus === 'Convertida') $badgeBg = 'bg-primary';
                                         ?>
                                         <span class="badge <?= $badgeBg ?>">
-                                            <?php
-                                                $statuses = [1 => 'Borrador', 2 => 'Enviada', 3 => 'Aprobada', 4 => 'Rechazada', 5 => 'Convertida'];
-                                                echo $statuses[$quot['id_status']] ?? 'Desconocido';
-                                            ?>
+                                            <?= htmlspecialchars($currentStatus) ?>
                                         </span>
                                     </td>
                                     <td><?= htmlspecialchars($quot['firstname'] . ' ' . $quot['apellidos']) ?></td>
@@ -61,7 +61,7 @@
                                             <a href="index.php?page=edit_quotation&id=<?= $quot['id'] ?>" class="btn btn-outline-secondary" title="Ver / Editar">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <?php if ($quot['id_status'] == 3): // Si está aprobada, mostrar opción de convertir a orden ?>
+                                            <?php if ($currentStatus === 'Aprobada'): // Si está aprobada, mostrar opción de convertir a orden ?>
                                                 <a href="index.php?page=convert_quotation&id=<?= $quot['id'] ?>" class="btn btn-outline-success" title="Convertir a Pedido">
                                                     <i class="bi bi-arrow-right-square"></i>
                                                 </a>

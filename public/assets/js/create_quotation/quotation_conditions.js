@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ----------------------------------------------------
-    // 💳 CONDICIONES DE PAGO Y PLAZOS DE CRÉDITO
+    // 💳 CONDICIONES DE PAGO Y PLAZOS DE CRÉDITO (BLINDADO)
     // ----------------------------------------------------
     const paymentTermsSelect = document.getElementById("payment_terms_select");
     const creditDaysContainer = document.getElementById("credit_days_container");
@@ -30,16 +30,19 @@ document.addEventListener('DOMContentLoaded', function () {
         function toggleCreditDays() {
             if (paymentTermsSelect.value === "Credito") {
                 creditDaysContainer.classList.remove("d-none");
-                creditDaysNumber.required = true;
+                if (creditDaysNumber) creditDaysNumber.required = true;
                 updateCreditText();
             } else {
                 creditDaysContainer.classList.add("d-none");
-                creditDaysNumber.required = false;
-                creditTermsHidden.value = "Contado";
+                if (creditDaysNumber) creditDaysNumber.required = false;
+                if (creditTermsHidden) creditTermsHidden.value = "Contado";
             }
         }
 
         function updateCreditText() {
+            // Validamos que existan los elementos antes de manipularlos para evitar errores en consola
+            if (!creditDaysNumber || !creditDaysLabel || !creditTermsHidden) return;
+
             let val = parseInt(creditDaysNumber.value.trim(), 10);
             if (isNaN(val) || val < 1) val = 1;
 
@@ -53,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
             creditDaysNumber.addEventListener("input", updateCreditText);
         }
 
-        toggleCreditDays(); // Estado inicial
+        toggleCreditDays(); // Evalúa el estado inicial
     }
 
     // ----------------------------------------------------
@@ -63,25 +66,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const exchangeRateContainer = document.getElementById("exchange_rate_container");
     const exchangeRateInput = document.getElementById("exchange_rate_input");
 
-    if (currencySelect && exchangeRateContainer) {
-        currencySelect.addEventListener("change", () => {
+    if (currencySelect && exchangeRateContainer && exchangeRateInput) {
+        function toggleExchangeRate() {
             if (currencySelect.value === "USD") {
                 exchangeRateContainer.classList.remove("d-none");
                 exchangeRateInput.required = true;
             } else {
                 exchangeRateContainer.classList.add("d-none");
                 exchangeRateInput.required = false;
-                exchangeRateInput.value = "";
             }
-        });
+        }
+
+        currencySelect.addEventListener("change", toggleExchangeRate);
+        toggleExchangeRate();
     }
 
+    // ----------------------------------------------------
+    // 👁️ VISTA PREVIA DE COTIZACIÓN (MODAL)
+    // ----------------------------------------------------
     const previewBtn = document.getElementById("preview_quotation_btn");
     if (previewBtn) {
         previewBtn.addEventListener("click", (e) => {
             e.preventDefault();
 
-            // 1. Obtener el TEXTO VISIBLE del cliente
             const searchTargetInput = document.getElementById("search_target");
             let clientName = searchTargetInput && searchTargetInput.value.trim() !== ""
                 ? searchTargetInput.value
@@ -90,28 +97,23 @@ document.addEventListener('DOMContentLoaded', function () {
             const attentionInput = document.getElementById("attention_to_input");
             const attentionTo = attentionInput ? attentionInput.value : "N/A";
 
-            // Capturar Moneda y Plazo de Crédito del formulario
-            const currencySelect = document.querySelector('select[name*="currency"], #currency_select');
-            const currencyText = currencySelect ? currencySelect.options[currencySelect.selectedIndex].text : "Pesos Mexicanos";
+            const currencySelectEl = document.querySelector('select[name*="currency"], #currency_select');
+            const currencyText = currencySelectEl ? currencySelectEl.options[currencySelectEl.selectedIndex].text : "Pesos Mexicanos";
 
-            // Capturar el texto dinámico real de los hidden inputs que ya creamos en las condiciones
             const creditHidden = document.getElementById("credit_terms_hidden");
             const creditTerms = creditHidden ? creditHidden.value : "30 días de crédito";
 
-            // Asignarlas al modal
             document.getElementById("prev_client_name").innerText = clientName;
             document.getElementById("prev_attention_to").innerText = attentionTo;
             document.getElementById("prev_currency").innerText = currencyText;
             document.getElementById("prev_credit_terms").innerText = creditTerms;
 
-            // 2. Extraer las partidas de la interfaz de manera dinámica
             const targetTbody = document.getElementById("prev_items_tbody");
             targetTbody.innerHTML = "";
 
             let calculatedSubtotal = 0;
             let itemsFound = 0;
 
-            // Buscamos los contenedores de las filas (.item-row) para evaluarlas limpiamente
             const itemRows = document.querySelectorAll('.item-row');
 
             if (itemRows.length > 0) {
@@ -122,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     const totalPriceInput = row.querySelector('.total-price-input');
                     const totalPriceVal = totalPriceInput ? (parseFloat(totalPriceInput.value) || 0) : 0;
 
-                    // 🛑 FILTRO CLAVE: Si la fila no tiene número de parte o su total es 0, LA IGNORAMOS por completo.
                     if (partNum === '' || totalPriceVal === 0) return;
 
                     const descInput = row.querySelector('input[name*="description"]');
@@ -154,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 targetTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No hay partidas agregadas todavía.</td></tr>`;
             }
 
-            // 3. Totales
             const iva = calculatedSubtotal * 0.16;
             const total = calculatedSubtotal + iva;
 
@@ -162,7 +162,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("prev_iva").innerText = `$ ${iva.toFixed(2)}`;
             document.getElementById("prev_total").innerText = `$ ${total.toFixed(2)}`;
 
-            // 4. Apertura segura del modal
             const modalEl = document.getElementById("quotationPreviewModal");
             if (modalEl) {
                 let existingModal = bootstrap.Modal.getInstance(modalEl);
@@ -174,6 +173,4 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-
-
 });

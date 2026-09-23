@@ -399,44 +399,59 @@ return [
     // ================= COTIZACIONES =================
     'my_quotations' => [
         'controller' => 'QuotationsController',
-        'method'     => 'index',       
+        'method'     => 'index',
         'public'     => false
     ],
     'create_quotation' => [
         'controller' => 'QuotationsController',
-        'method'     => 'create',      
+        'method'     => 'create',
         'public'     => false
     ],
     'store_quotation' => [
         'controller' => 'QuotationsController',
-        'method'     => 'store',       
+        'method'     => 'store',
         'public'     => false
     ],
     'get_customer_contacts' => [
         'controller' => 'QuotationsController',
-        'method'     => 'getCustomerContacts',       
+        'method'     => 'getCustomerContacts',
         'public'     => false
     ],
     'search_prospect' => [
         'controller' => 'QuotationsController',
-        'method'     => 'searchProspect',       
+        'method'     => 'searchProspect',
         'public'     => false
     ],
     'store_quick_contact' => [
         'controller' => 'QuotationsController',
-        'method'     => 'storeQuickContact',       
+        'method'     => 'storeQuickContact',
         'public'     => false
     ],
     'print_quotation' => [
         'controller' => 'QuotationsController',
         'method'     => 'printPdf',
         'public'     => false
-    ],    
+    ],
     'preview_quotation_html' => [
         'controller' => 'QuotationsController',
-        'method'     => 'previewHtml',      
+        'method'     => 'previewHtml',
+        'public'     => false
+    ],
+    'edit_quotation' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'edit',
+        'public'     => false
+    ],
+    'update_quotation' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'update',
+        'public'     => false
+    ],
+    'clone_quotation_version' => [
+        'controller' => 'QuotationsController',
+        'method'     => 'cloneVersion',
         'public'     => false
     ],
 
-    
+
 ];

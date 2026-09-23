@@ -285,6 +285,90 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // --- 🛠️ CARGAR PARTIDA EXISTENTE (MODO EDICIÓN) ---
+    function addExistingItemRow(itemData) {
+        const clone = template.content.cloneNode(true);
+        const rowEl = clone.querySelector('.item-row');
+
+        // Reemplazamos el INDEX por el índice actual de la fila
+        rowEl.innerHTML = rowEl.innerHTML.replaceAll('INDEX', rowIndex);
+        itemsContainer.appendChild(rowEl); // 👈 Esto es lo que dibuja físicamente la fila en la pantalla
+
+        const newRow = itemsContainer.lastElementChild;
+
+        // Inicializamos todos los eventos y autocompletados de esta fila
+        initRowEvents(newRow);
+        initProductAutocomplete(newRow);
+        initSupplierAutocompleteForRow(newRow);
+        initBranchValidation(newRow);
+        initProductFieldWatcher(newRow);
+        initBranchSelectEvents(newRow);
+
+        // Asignamos número de partida
+        const itemNumInput = newRow.querySelector('.item-number-input');
+        if (itemNumInput) itemNumInput.value = itemData.item_number || (rowIndex + 1);
+
+        const rowNumBadge = newRow.querySelector('.row-number');
+        if (rowNumBadge) rowNumBadge.textContent = `#${itemData.item_number || (rowIndex + 1)}`;
+
+        // Rellenar Producto
+        const partInput = newRow.querySelector('.product-search-part');
+        const descInput = newRow.querySelector('.product-search-desc');
+        const productIdInput = newRow.querySelector('.product-id');
+
+        if (partInput) partInput.value = itemData.product_part_number || itemData.part_number || '';
+        if (descInput) {
+            descInput.value = itemData.product_description || itemData.description || '';
+            descInput.disabled = false;
+        }
+        if (productIdInput) productIdInput.value = itemData.product_id || '';
+
+        // Rellenar Cantidad y Costos Financieros
+        const qtyInput = newRow.querySelector('.qty-input');
+        const costInput = newRow.querySelector('.cost-input');
+        const profitInput = newRow.querySelector('.profit-input');
+        const priceInput = newRow.querySelector('.price-input');
+        const freightInput = newRow.querySelector('.freight-input');
+
+        if (qtyInput) qtyInput.value = itemData.quantity || 1;
+        if (costInput) costInput.value = itemData.purchase_unit_cost || 0.00;
+        if (profitInput) profitInput.value = itemData.profit_percentage || 0.00;
+        if (priceInput) priceInput.value = itemData.unit_price || 0.00;
+        if (freightInput) freightInput.value = itemData.freight_cost || 0.00;
+
+        // Rellenar Proveedor y Sucursal
+        const supplierSearch = newRow.querySelector('.supplier-search');
+        const supplierId = newRow.querySelector('.supplier-id');
+        const branchSelect = newRow.querySelector('.branch-select');
+
+        if (supplierSearch) supplierSearch.value = itemData.supplier_name || '';
+        if (supplierId) supplierId.value = itemData.id_supplier || '';
+
+        if (itemData.id_supplier) {
+            loadBranchesIntoSelect(newRow, itemData.id_supplier).then(() => {
+                if (branchSelect && itemData.id_branch) {
+                    branchSelect.value = itemData.id_branch;
+                }
+            });
+        }
+
+        // Tiempos de entrega
+        const deliveryDaysNumber = newRow.querySelector('.delivery-days-number');
+        const deliveryTermsHidden = newRow.querySelector('.delivery-terms-hidden');
+        if (deliveryDaysNumber && itemData.delivery_time_days) {
+            const numMatch = itemData.delivery_time_days.match(/\d+/);
+            if (numMatch) deliveryDaysNumber.value = numMatch[0];
+            if (deliveryTermsHidden) deliveryTermsHidden.value = itemData.delivery_time_days;
+        }
+
+        rowIndex++;
+        updateRowNumbers();
+        computeRow(newRow, true);
+        calculateAll();
+    }
+
+    window.addExistingItemRow = addExistingItemRow;
+
     // --- GESTIÓN DE FILAS ---
     function addItemRow() {
         const clone = template.content.cloneNode(true);
@@ -362,8 +446,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (rowIndex === 0) {
             qtyInput.value = 1;
-            costInput.value = 100.00;
-            profitInput.value = 40.00;
+            costInput.value = 0;
+            profitInput.value = 0;
             if (deliveryDaysNumber) deliveryDaysNumber.value = 2;
             updateDeliveryText();
             computeRow(row);
@@ -417,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.item-row').forEach(row => {
             const totalPrice = parseFloat(row.querySelector('.total-price-input').value) || 0;
             subtotal += totalPrice;
-            
+
         });
 
         const iva = subtotal * 0.16;
@@ -717,6 +801,67 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Iniciar con la primera fila por defecto
-    addItemRow();
+// --- 🚀 INICIALIZACIÓN INTELIGENTE (NUEVO VS EDICIÓN / RE-COTIZACIÓN) ---
+    const quotationIdInput = document.querySelector('input[name="id"]');
+    const existingRows = document.querySelectorAll('.item-row');
+
+    // Si estamos editando o recotizando y PHP ya pintó filas en el HTML:
+    if (existingRows.length > 0) {
+        existingRows.forEach((row, index) => {
+            row.dataset.index = index;
+
+            // Inicializamos eventos y autocompletados
+            initRowEvents(row);
+            initProductAutocomplete(row);
+            initSupplierAutocompleteForRow(row);
+            initBranchValidation(row);
+            initProductFieldWatcher(row);
+            initBranchSelectEvents(row);
+
+            // 1. Sincronizamos los valores que PHP trajo en el HTML a los inputs activos
+            const qtyInput = row.querySelector('.qty-input');
+            const costInput = row.querySelector('.cost-input');
+            const profitInput = row.querySelector('.profit-input');
+            const priceInput = row.querySelector('.price-input');
+            const freightInput = row.querySelector('.freight-input');
+
+            if (qtyInput && qtyInput.getAttribute('value')) qtyInput.value = qtyInput.getAttribute('value');
+            if (costInput && costInput.getAttribute('value')) costInput.value = costInput.getAttribute('value');
+            if (profitInput && profitInput.getAttribute('value')) profitInput.value = profitInput.getAttribute('value');
+            if (priceInput && priceInput.getAttribute('value')) priceInput.value = priceInput.getAttribute('value');
+            if (freightInput && freightInput.getAttribute('value')) freightInput.value = freightInput.getAttribute('value');
+
+            // 2. 🔹 CORRECCIÓN CLAVE: Calculamos matemáticamente el total de esta partida 
+            // con base en sus valores reales restaurados para que el input oculto no vaya vacío o erróneo.
+            const qty = parseFloat(qtyInput?.value) || 0;
+            const unitPrice = parseFloat(priceInput?.value) || 0;
+            const freight = parseFloat(freightInput?.value) || 0;
+            const cost = parseFloat(costInput?.value) || 0;
+
+            const totalPrice = (unitPrice * qty) + freight;
+            const netProfitPerUnit = unitPrice - cost;
+            const totalNetProfit = netProfitPerUnit * qty;
+
+            // Actualizamos los campos ocultos y de despliegue de la partida
+            const totalPriceInput = row.querySelector('.total-price-input');
+            const netProfitInput = row.querySelector('.net-profit-input');
+            const netProfitDisplay = row.querySelector('.net-profit-display');
+
+            if (totalPriceInput) totalPriceInput.value = totalPrice.toFixed(2);
+            if (netProfitInput) netProfitInput.value = totalNetProfit.toFixed(2);
+            if (netProfitDisplay) netProfitDisplay.value = `$${totalNetProfit.toFixed(2)}`;
+        });
+
+        // 3. Actualizamos numeración y ahora sí calculamos los totales generales de forma perfecta
+        updateRowNumbers();
+        calculateAll();
+
+        rowIndex = existingRows.length;
+
+    } else {
+        // Si es una cotización nueva, arrancamos con una fila vacía
+        if (typeof addItemRow === 'function') {
+            addItemRow();
+        }
+    }
 });
