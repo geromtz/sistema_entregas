@@ -34,28 +34,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ----------------------------------------------------
-    // 3. ENVÍO DEL FORMULARIO POR AJAX (FETCH)
+    // 3. FUNCIÓN DE ENVÍO REAL (TU MISMO FETCH ORIGINAL)
     // ----------------------------------------------------
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        // Validar que exista al menos una partida en el contenedor
-        const itemsRows = document.querySelectorAll('.item-row');
-        if (itemsRows.length === 0) {
-            window.showAppAlert('La cotización requiere al menos una partida.', 'warning');
-            return;
-        }
-
-        // Validar que se haya seleccionado un cliente o prospecto
-        const customerId = document.getElementById('id_customer').value.trim();
-        const prospectId = document.getElementById('id_prospect').value.trim();
-        if (customerId === '' && prospectId === '') {
-            window.showAppAlert('Debes seleccionar un Cliente o un Prospecto de destino.', 'warning');
-            document.getElementById('search_target').focus();
-            return;
-        }
-
-        const submitBtn = form.querySelector('button[type="submit"]');
+    async function ejecutarEnvioAjax() {
+        const submitBtn = form.querySelector(`button[type="submit"][value="${clickedAction}"]`) || form.querySelector('button[type="submit"]');
         const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
 
         // Bloquear botón para evitar doble clic
@@ -119,5 +101,121 @@ document.addEventListener('DOMContentLoaded', function () {
                 submitBtn.innerHTML = originalBtnText;
             }
         }
+    }
+
+    // ----------------------------------------------------
+    // 4. INTERCEPTAR EL SUBMIT PARA PREGUNTAR CON EL MODAL
+    // ----------------------------------------------------
+    form.addEventListener('submit', function (e) {
+        e.preventDefault(); // Detenemos el envío inmediato
+
+        // Validar que exista al menos una partida en el contenedor
+        const itemsRows = document.querySelectorAll('.item-row');
+        if (itemsRows.length === 0) {
+            window.showAppAlert('La cotización requiere al menos una partida.', 'warning');
+            return;
+        }
+
+        // Validar que se haya seleccionado un cliente o prospecto
+        const customerId = document.getElementById('id_customer').value.trim();
+        const prospectId = document.getElementById('id_prospect').value.trim();
+        if (customerId === '' && prospectId === '') {
+            window.showAppAlert('Debes seleccionar un Cliente o un Prospecto de destino.', 'warning');
+            document.getElementById('search_target').focus();
+            return;
+        }
+
+        // 🔹 BUSCAMOS EL MODAL DE BOOTSTRAP EN TU VISTA
+        const modalEl = document.getElementById('quotationActionConfirmModal');
+        
+        // Si por alguna razón el modal no existe en la vista, mandamos el AJAX directo para no bloquearte
+        if (!modalEl) {
+            ejecutarEnvioAjax();
+            return;
+        }
+
+        // Personalizamos textos y colores según el botón que se presionó
+        const modalTitle = document.getElementById('confirmModalTitle');
+        const modalText = document.getElementById('confirmModalText');
+        const confirmBtn = document.getElementById('confirmActionBtn');
+
+        if (clickedAction === 'emit') {
+            modalTitle.innerHTML = `<i class="bi bi-shield-exclamation text-warning me-2"></i> ⚠️ ¿Emitir y Congelar Cotización?`;
+            modalText.textContent = "Una vez emitida formalmente, esta cotización quedará congelada y no se podrá modificar directamente. ¿Deseas enviarla ahora?";
+            confirmBtn.className = "btn btn-success btn-sm rounded-pill px-4 fw-semibold shadow-sm";
+            confirmBtn.textContent = "Sí, emitir";
+        } else if (clickedAction === 'update_draft') {
+            modalTitle.innerHTML = `<i class="bi bi-shield-exclamation text-primary me-2"></i> 💾 ¿Actualizar Borrador?`;
+            modalText.textContent = "¿Estás seguro de guardar los cambios realizados en este borrador?";
+            confirmBtn.className = "btn btn-primary btn-sm rounded-pill px-4 fw-semibold shadow-sm";
+            confirmBtn.textContent = "Sí, actualizar";
+        } else {
+            modalTitle.innerHTML = `<i class="bi bi-shield-exclamation text-secondary me-2"></i> 💾 ¿Guardar Borrador?`;
+            modalText.textContent = "¿Deseas guardar esta cotización como borrador?";
+            confirmBtn.className = "btn btn-secondary btn-sm rounded-pill px-4 fw-semibold shadow-sm";
+            confirmBtn.textContent = "Sí, guardar";
+        }
+
+        // Mostramos el modal de Bootstrap
+        let confirmModal = bootstrap.Modal.getInstance(modalEl);
+        if (!confirmModal) {
+            confirmModal = new bootstrap.Modal(modalEl);
+        }
+        confirmModal.show();
+
+        // Limpiamos eventos previos del botón de aceptar para evitar duplicidad de envíos
+        const nuevoBtnConfirmar = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(nuevoBtnConfirmar, confirmBtn);
+
+        // Cuando el usuario confirma haciendo clic en el botón del modal
+        nuevoBtnConfirmar.addEventListener('click', function () {
+            confirmModal.hide(); // Cerramos el modal
+            ejecutarEnvioAjax(); // 🚀 Disparamos tu función original de AJAX intacta
+        });
     });
+
+    // ----------------------------------------------------
+    // 5. INTERCEPTAR EL CLIC EN EL BOTÓN DE RE-COTIZAR (CLONE)
+    // ----------------------------------------------------
+    const cloneBtn = document.querySelector('a[href*="clone_quotation_version"]');
+    if (cloneBtn) {
+        cloneBtn.addEventListener('click', function (e) {
+            e.preventDefault(); // Detenemos la navegación directa
+            const targetUrl = this.href;
+
+            const modalEl = document.getElementById('quotationActionConfirmModal');
+            if (!modalEl) {
+                // Si por algo no está el modal, dejamos que navegue directo
+                window.location.href = targetUrl;
+                return;
+            }
+
+            const modalTitle = document.getElementById('confirmModalTitle');
+            const modalText = document.getElementById('confirmModalText');
+            const confirmBtn = document.getElementById('confirmActionBtn');
+
+            // Personalizamos el modal para la acción de re-cotizar
+            modalTitle.innerHTML = `<i class="bi bi-shield-exclamation text-warning me-2"></i> 📋 ¿Generar Nueva Versión?`;
+            modalText.textContent = "Se creará una copia de esta cotización como una nueva versión comercial para re-cotizar. ¿Deseas proceder?";
+            confirmBtn.className = "btn btn-warning btn-sm rounded-pill px-4 fw-semibold shadow-sm text-dark";
+            confirmBtn.textContent = "Sí, clonar versión";
+
+            // Mostramos el modal de Bootstrap
+            let confirmModal = bootstrap.Modal.getInstance(modalEl);
+            if (!confirmModal) {
+                confirmModal = new bootstrap.Modal(modalEl);
+            }
+            confirmModal.show();
+
+            // Limpiamos eventos previos del botón de aceptar
+            const nuevoBtnConfirmar = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(nuevoBtnConfirmar, confirmBtn);
+
+            // Cuando el usuario confirma, redirigimos a la URL de clonación
+            nuevoBtnConfirmar.addEventListener('click', function () {
+                confirmModal.hide();
+                window.location.href = targetUrl;
+            });
+        });
+    }
 });

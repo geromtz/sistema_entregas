@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!items.length) {
             const item = document.createElement("div");
-            item.className = "list-group-item list-group-item-action text-muted small";
+            item.className = "list-group-item list-group-item-action text-muted small py-2 px-3";
             item.textContent = "No se encontraron resultados.";
             searchList.appendChild(item);
             return;
@@ -166,7 +166,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         items.forEach((item) => {
             const div = document.createElement("div");
-            div.className = "list-group-item list-group-item-action";
+            // 🔹 Clases mejoradas para espaciado pro
+            div.className = "list-group-item list-group-item-action py-2 px-3 text-wrap";
             div.textContent = item.business_name?.trim() || item.company_name?.trim() || "Sin nombre";
             div.dataset.id = item.id;
             searchList.appendChild(div);

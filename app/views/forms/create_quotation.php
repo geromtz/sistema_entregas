@@ -5,6 +5,65 @@
         position: relative;
         z-index: 10;
     }
+
+    /* Tarjeta normal o clara (Impares / Odd) */
+    .item-row.row-odd {
+        background-color: #ffffff !important;
+        /* Blanco puro */
+    }
+
+    /* Tarjeta ligeramente más oscura o tintada (Pares / Even) */
+    .item-row.row-even {
+        background-color: #e2e0e0 !important;
+        /* Un gris muy tenue (como el bg-light de Bootstrap) */
+    }
+
+    /* 🌟 Estilo Pro para todas las listas flotantes de autocompletado */
+    .product-list-part,
+    .product-list-desc,
+    .supplier-list,
+    #search_list,
+    #contact_search_list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1050;
+        /* Por encima de cualquier tarjeta o modal secundario */
+
+        /* 📏 Ancho Pro: Forzamos a que sea más ancho que el input (ej. 350px o hasta 120% del contenedor) */
+        min-width: 100%;
+        width: max-content;
+        max-width: 450px;
+
+        /* ↕️ Scroll Pro: Altura máxima y scroll vertical controlado */
+        max-height: 250px;
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        /* 🎨 Sombra y bordes estéticos */
+        background-color: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    /* Opcional: Estilo elegante para la barra de scroll interna de las listas */
+    .product-list-part::-webkit-scrollbar,
+    .product-list-desc::-webkit-scrollbar,
+    .supplier-list::-webkit-scrollbar,
+    #search_list::-webkit-scrollbar,
+    #contact_search_list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .product-list-part::-webkit-scrollbar-thumb,
+    .product-list-desc::-webkit-scrollbar-thumb,
+    .supplier-list::-webkit-scrollbar-thumb,
+    #search_list::-webkit-scrollbar,
+    #contact_search_list::-webkit-scrollbar {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
 </style>
 <div class="container-fluid py-4 px-4">
     <!-- Header Minimalista y Pro -->
@@ -184,108 +243,110 @@
                     </div>
 
                     <!-- Contenedor Dinámico de Renglones (Renderizado por PHP en Edición / JS en Creación) -->
-                    <div id="items_container" class="d-flex flex-column gap-3 mb-4">
-                        <?php if (!empty($isEdit) && !empty($items)): ?>
-                            <?php foreach ($items as $index => $item): ?>
-                                <div class="item-row card border shadow-2xs p-3 rounded-3 position-relative bg-white mb-3" data-index="<?= $index ?>">
-                                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3 remove-item-btn" aria-label="Eliminar"></button>
+                    <div id="items_scroll_wrapper" style="max-height: 500px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">
+                        <div id="items_container" class="d-flex flex-column gap-3 mb-4">
+                            <?php if (!empty($isEdit) && !empty($items)): ?>
+                                <?php foreach ($items as $index => $item): ?>
+                                    <div class="item-row card border shadow-2xs p-3 rounded-3 position-relative bg-white mb-3" data-index="<?= $index ?>">
+                                        <button type="button" class="btn-close position-absolute top-0 end-0 m-3 remove-item-btn" aria-label="Eliminar"></button>
 
-                                    <!-- Fila Superior: Datos Comerciales Visibles -->
-                                    <div class="row g-2 align-items-center mb-3">
-                                        <div class="col-auto">
-                                            <span class="badge bg-secondary-subtle text-secondary font-monospace row-number px-2 py-1">#<?= $index + 1 ?></span>
-                                            <input type="hidden" class="item-number-input" name="items[<?= $index ?>][item_number]" value="<?= $index + 1 ?>">
-                                        </div>
-
-                                        <!-- PRODUCTO / NÚMERO DE PARTE -->
-                                        <div class="col-md-3 position-relative">
-                                            <label class="form-label fs-8 text-muted mb-0">No. Parte</label>
-                                            <input type="text" class="form-control form-control-sm font-monospace product-search-part" name="items[<?= $index ?>][part_number]" value="<?= htmlspecialchars($item['part_number'] ?? $item['product_part_number'] ?? '') ?>" placeholder="Buscar no. parte..." autocomplete="off" required>
-                                            <input type="hidden" class="product-id" name="items[<?= $index ?>][product_id]" value="<?= $item['product_id'] ?? '' ?>">
-                                            <div class="product-list-part list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
-                                        </div>
-
-                                        <!-- DESCRIPCIÓN DEL PRODUCTO -->
-                                        <div class="col-md-5 position-relative">
-                                            <label class="form-label fs-8 text-muted mb-0">Descripción del Producto</label>
-                                            <input type="text" class="form-control form-control-sm product-search-desc" name="items[<?= $index ?>][description]" value="<?= htmlspecialchars($item['description'] ?? $item['product_description'] ?? '') ?>" placeholder="Buscar Descripción..." autocomplete="off" required>
-                                            <div class="product-list-desc list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
-                                        </div>
-
-                                        <div class="col-md-2">
-                                            <label class="form-label fs-8 text-muted mb-0">Cant.</label>
-                                            <input type="number" class="form-control form-control-sm qty-input" name="items[<?= $index ?>][quantity]" value="<?= $item['quantity'] ?? 1 ?>" min="1" required>
-                                        </div>
-                                    </div>
-
-                                    <!-- Cocina Interna de Costos & Logística -->
-                                    <div class="bg-light-subtle border border-warning-subtle rounded-3 p-3 mt-1">
-                                        <div class="row g-2">
-                                            <!-- Bloque Financiero -->
-                                            <div class="col-md-6 border-end">
-                                                <span class="d-block fs-8 fw-bold text-danger text-uppercase mb-2"><i class="bi bi-calculator me-1"></i> Márgenes y Costos</span>
-                                                <div class="row g-2">
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-muted mb-0">Costo Unit. ($)</label>
-                                                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle cost-input" name="items[<?= $index ?>][purchase_unit_cost]" value="<?= htmlspecialchars($item['purchase_unit_cost'] ?? $item['cost'] ?? '0.00') ?>" required>
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-muted mb-0">% Utilidad</label>
-                                                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle profit-input" name="items[<?= $index ?>][profit_percentage]" value="<?= htmlspecialchars($item['profit_percentage'] ?? $item['profit'] ?? '0.00') ?>" required>
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-dark fw-medium mb-0">Precio Venta Unit.</label>
-                                                        <input type="number" step="0.01" class="form-control form-control-sm bg-white fw-bold text-success price-input" name="items[<?= $index ?>][unit_price]" value="<?= htmlspecialchars($item['unit_price'] ?? $item['price'] ?? '0.00') ?>" required>
-                                                        <input type="hidden" class="total-price-input" name="items[<?= $index ?>][total_price]" value="<?= htmlspecialchars($item['total_price'] ?? '0.00') ?>">
-                                                    </div>
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-muted mb-0">Utilidad Neta ($)</label>
-                                                        <input type="text" class="form-control form-control-sm bg-white text-muted net-profit-display" readonly value="$<?= number_format($item['net_profit'] ?? 0, 2) ?>">
-                                                        <input type="hidden" class="net-profit-input" name="items[<?= $index ?>][net_profit]" value="<?= htmlspecialchars($item['net_profit'] ?? '0.00') ?>">
-                                                    </div>
-                                                </div>
+                                        <!-- Fila Superior: Datos Comerciales Visibles -->
+                                        <div class="row g-2 align-items-center mb-3">
+                                            <div class="col-auto">
+                                                <span class="badge bg-secondary-subtle text-secondary font-monospace row-number px-2 py-1">#<?= $index + 1 ?></span>
+                                                <input type="hidden" class="item-number-input" name="items[<?= $index ?>][item_number]" value="<?= $index + 1 ?>">
                                             </div>
-                                            <!-- Bloque Logístico -->
-                                            <div class="col-md-6 ps-md-3">
-                                                <span class="d-block fs-8 fw-bold text-primary text-uppercase mb-2"><i class="bi bi-truck me-1"></i> Logística y Abastecimiento</span>
-                                                <div class="row g-2">
-                                                    <div class="col-6 position-relative">
-                                                        <label class="form-label fs-8 text-muted mb-0">Proveedor / Mayorista</label>
-                                                        <input type="text" class="form-control form-control-sm supplier-search" value="<?= htmlspecialchars($item['supplier_name'] ?? '') ?>" placeholder="Buscar proveedor..." autocomplete="off">
-                                                        <input type="hidden" class="supplier-id" name="items[<?= $index ?>][id_supplier]" value="<?= $item['id_supplier'] ?? '' ?>">
-                                                        <div class="supplier-list list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
-                                                    </div>
 
-                                                    <div class="col-md-4 position-relative">
-                                                        <label class="form-label fs-8 text-muted mb-0">Sucursal Prov.</label>
-                                                        <select class="form-select form-select-sm branch-select" name="items[<?= $index ?>][id_branch]" required>
-                                                            <option value="">Seleccione sucursal...</option>
-                                                            <?php if (!empty($item['id_branch'])): ?>
-                                                                <option value="<?= $item['id_branch'] ?>" selected>Sucursal ID: <?= $item['id_branch'] ?></option>
-                                                            <?php endif; ?>
-                                                        </select>
-                                                    </div>
+                                            <!-- PRODUCTO / NÚMERO DE PARTE -->
+                                            <div class="col-md-3 position-relative">
+                                                <label class="form-label fs-8 text-muted mb-0">No. Parte</label>
+                                                <input type="text" class="form-control form-control-sm font-monospace product-search-part" name="items[<?= $index ?>][part_number]" value="<?= htmlspecialchars($item['part_number'] ?? $item['product_part_number'] ?? '') ?>" placeholder="Buscar no. parte..." autocomplete="off" required>
+                                                <input type="hidden" class="product-id" name="items[<?= $index ?>][product_id]" value="<?= $item['product_id'] ?? '' ?>">
+                                                <div class="product-list-part list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                            </div>
 
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-muted mb-0">Flete Unitario ($)</label>
-                                                        <input type="number" step="0.01" class="form-control form-control-sm freight-input" name="items[<?= $index ?>][freight_cost]" value="<?= $item['freight_cost'] ?? '0.00' ?>">
-                                                    </div>
+                                            <!-- DESCRIPCIÓN DEL PRODUCTO -->
+                                            <div class="col-md-5 position-relative">
+                                                <label class="form-label fs-8 text-muted mb-0">Descripción del Producto</label>
+                                                <input type="text" class="form-control form-control-sm product-search-desc" name="items[<?= $index ?>][description]" value="<?= htmlspecialchars($item['description'] ?? $item['product_description'] ?? '') ?>" placeholder="Buscar Descripción..." autocomplete="off" required>
+                                                <div class="product-list-desc list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                            </div>
 
-                                                    <div class="col-6">
-                                                        <label class="form-label fs-8 text-muted mb-0">Tiempo de Entrega</label>
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="number" min="1" class="form-control form-control-sm delivery-days-number" value="<?= intval($item['delivery_time_days'] ?? 2) ?>" required>
-                                                            <span class="input-group-text delivery-days-label" style="font-size: 10px;">DÍAS</span>
+                                            <div class="col-md-2">
+                                                <label class="form-label fs-8 text-muted mb-0">Cant.</label>
+                                                <input type="number" class="form-control form-control-sm qty-input" name="items[<?= $index ?>][quantity]" value="<?= $item['quantity'] ?? 1 ?>" min="1" required>
+                                            </div>
+                                        </div>
+
+                                        <!-- Cocina Interna de Costos & Logística -->
+                                        <div class="bg-light-subtle border border-warning-subtle rounded-3 p-3 mt-1">
+                                            <div class="row g-2">
+                                                <!-- Bloque Financiero -->
+                                                <div class="col-md-6 border-end">
+                                                    <span class="d-block fs-8 fw-bold text-danger text-uppercase mb-2"><i class="bi bi-calculator me-1"></i> Márgenes y Costos</span>
+                                                    <div class="row g-2">
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-muted mb-0">Costo Unit. ($)</label>
+                                                            <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle cost-input" name="items[<?= $index ?>][purchase_unit_cost]" value="<?= htmlspecialchars($item['purchase_unit_cost'] ?? $item['cost'] ?? '0.00') ?>" required>
                                                         </div>
-                                                        <input type="hidden" class="delivery-terms-hidden" name="items[<?= $index ?>][delivery_time_days]" value="<?= htmlspecialchars($item['delivery_time_days'] ?? '2 DÍAS') ?>">
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-muted mb-0">% Utilidad</label>
+                                                            <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle profit-input" name="items[<?= $index ?>][profit_percentage]" value="<?= htmlspecialchars($item['profit_percentage'] ?? $item['profit'] ?? '0.00') ?>" required>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-dark fw-medium mb-0">Precio Venta Unit.</label>
+                                                            <input type="number" step="0.01" class="form-control form-control-sm bg-white fw-bold text-success price-input" name="items[<?= $index ?>][unit_price]" value="<?= htmlspecialchars($item['unit_price'] ?? $item['price'] ?? '0.00') ?>" required>
+                                                            <input type="hidden" class="total-price-input" name="items[<?= $index ?>][total_price]" value="<?= htmlspecialchars($item['total_price'] ?? '0.00') ?>">
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-muted mb-0">Utilidad Neta ($)</label>
+                                                            <input type="text" class="form-control form-control-sm bg-white text-muted net-profit-display" readonly value="$<?= number_format($item['net_profit'] ?? 0, 2) ?>">
+                                                            <input type="hidden" class="net-profit-input" name="items[<?= $index ?>][net_profit]" value="<?= htmlspecialchars($item['net_profit'] ?? '0.00') ?>">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Bloque Logístico -->
+                                                <div class="col-md-6 ps-md-3">
+                                                    <span class="d-block fs-8 fw-bold text-primary text-uppercase mb-2"><i class="bi bi-truck me-1"></i> Logística y Abastecimiento</span>
+                                                    <div class="row g-2">
+                                                        <div class="col-6 position-relative">
+                                                            <label class="form-label fs-8 text-muted mb-0">Proveedor / Mayorista</label>
+                                                            <input type="text" class="form-control form-control-sm supplier-search" value="<?= htmlspecialchars($item['supplier_name'] ?? '') ?>" placeholder="Buscar proveedor..." autocomplete="off">
+                                                            <input type="hidden" class="supplier-id" name="items[<?= $index ?>][id_supplier]" value="<?= $item['id_supplier'] ?? '' ?>">
+                                                            <div class="supplier-list list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                                                        </div>
+
+                                                        <div class="col-md-4 position-relative">
+                                                            <label class="form-label fs-8 text-muted mb-0">Sucursal Prov.</label>
+                                                            <select class="form-select form-select-sm branch-select" name="items[<?= $index ?>][id_branch]" required>
+                                                                <option value="">Seleccione sucursal...</option>
+                                                                <?php if (!empty($item['id_branch'])): ?>
+                                                                    <option value="<?= $item['id_branch'] ?>" selected>Sucursal ID: <?= $item['id_branch'] ?></option>
+                                                                <?php endif; ?>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-muted mb-0">Flete Unitario ($)</label>
+                                                            <input type="number" step="0.01" class="form-control form-control-sm freight-input" name="items[<?= $index ?>][freight_cost]" value="<?= $item['freight_cost'] ?? '0.00' ?>">
+                                                        </div>
+
+                                                        <div class="col-6">
+                                                            <label class="form-label fs-8 text-muted mb-0">Tiempo de Entrega</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" min="1" class="form-control form-control-sm delivery-days-number" value="<?= intval($item['delivery_time_days'] ?? 2) ?>" required>
+                                                                <span class="input-group-text delivery-days-label" style="font-size: 10px;">DÍAS</span>
+                                                            </div>
+                                                            <input type="hidden" class="delivery-terms-hidden" name="items[<?= $index ?>][delivery_time_days]" value="<?= htmlspecialchars($item['delivery_time_days'] ?? '2') ?>">
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
@@ -337,12 +398,38 @@
 
                                 <?php else: ?>
                                     <!-- ESCENARIO C: Cotización ya emitida, vencida, reemplazada o cerrada -->
-                                    <div class="alert alert-warning text-center py-2 mb-2 small">
-                                        Esta cotización ya fue emitida. Los cambios requieren una nueva versión.
-                                    </div>
-                                    <a href="index.php?page=clone_quotation_version&id=<?= $quotation['id'] ?? 0 ?>" class="btn btn-warning rounded-pill py-2 fw-semibold shadow-sm text-center text-decoration-none d-block">
-                                        <i class="bi bi-files me-1"></i> Re-cotizar (Crear Nueva Versión)
-                                    </a>
+                                    <?php
+                                    $statusActual = $quotation['status'] ?? '';
+                                    $replacementFolio = $quotation['replacement_folio'] ?? null;
+                                    $replacementId = $quotation['replacement_id'] ?? null;
+                                    $parentFolio = $quotation['parent_folio'] ?? null;
+                                    ?>
+
+                                    <?php if ($statusActual === 'Reemplazada'): ?>
+                                        <div class="alert alert-dark text-center py-3 mb-2 small border">
+                                            <i class="bi bi-shield-lock-fill d-block fs-4 mb-1 text-secondary"></i>
+                                            Esta cotización se encuentra <strong>Reemplazada</strong>.
+
+                                            <?php if ($replacementFolio && $replacementId): ?>
+                                                <div class="mt-2">
+                                                    Sustituida por la nueva versión:
+                                                    <a href="index.php?page=edit_quotation&id=<?= $replacementId ?>" class="fw-bold text-decoration-underline text-info">
+                                                        <?= htmlspecialchars($replacementFolio) ?>
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="alert alert-warning text-center py-2 mb-2 small">
+                                            Esta cotización ya fue emitida. Los cambios requieren una nueva versión.
+                                            <?php if ($parentFolio): ?>
+                                                <br><span class="text-muted fs-8">Derivada de la versión anterior: <?= htmlspecialchars($parentFolio) ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <a href="index.php?page=clone_quotation_version&id=<?= $quotation['id'] ?? 0 ?>" class="btn btn-warning rounded-pill py-2 fw-semibold shadow-sm text-center text-decoration-none d-block">
+                                            <i class="bi bi-files me-1"></i> Re-cotizar (Crear Nueva Versión)
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -368,13 +455,13 @@
                 <label class="form-label fs-8 text-muted mb-0">No. Parte</label>
                 <input type="text" class="form-control form-control-sm font-monospace product-search-part" name="items[INDEX][part_number]" placeholder="Buscar no. parte..." autocomplete="off" required>
                 <input type="hidden" class="product-id" name="items[INDEX][product_id]">
-                <div class="product-list-part list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                <div class="product-list-part list-group position-absolute shadow-sm" style="z-index:1000;"></div>
             </div>
 
             <div class="col-md-5 position-relative">
                 <label class="form-label fs-8 text-muted mb-0">Descripción del Producto</label>
                 <input type="text" class="form-control form-control-sm product-search-desc" name="items[INDEX][description]" placeholder="Buscar Descripción..." autocomplete="off" required disabled>
-                <div class="product-list-desc list-group position-absolute w-100 shadow-sm" style="z-index:1000;"></div>
+                <div class="product-list-desc list-group position-absolute shadow-sm" style="z-index:1000;"></div>
             </div>
 
             <div class="col-md-2">
@@ -437,7 +524,7 @@
                                 <input type="number" min="1" class="form-control form-control-sm delivery-days-number" value="2" required>
                                 <span class="input-group-text delivery-days-label" style="font-size: 10px;">DÍAS</span>
                             </div>
-                            <input type="hidden" class="delivery-terms-hidden" name="items[INDEX][delivery_time_days]" value="2 DÍAS">
+                            <input type="hidden" class="delivery-terms-hidden" name="items[INDEX][delivery_time_days]" value="2">
                         </div>
                     </div>
                 </div>
@@ -636,6 +723,28 @@
             </div>
             <div class="modal-footer bg-white">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar y Seguir Editando</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL DE CONFIRMACIÓN DE ACCIONES -->
+<div class="modal fade" id="quotationActionConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="confirmModalTitle">
+                    <i class="bi bi-shield-exclamation text-warning me-2"></i> Confirmar Acción
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p class="text-secondary mb-0" id="confirmModalText">¿Estás seguro de realizar esta acción?</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm rounded-pill px-4 fw-semibold shadow-sm" id="confirmActionBtn">Sí, continuar</button>
             </div>
         </div>
     </div>

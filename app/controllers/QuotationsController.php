@@ -113,7 +113,15 @@ class QuotationsController
         $items = $_POST['items'] ?? [];
         foreach ($items as $index => $item) {
             $item['item_number'] = $index + 1;
-            $this->quotationModel->addItem($quotationId, $item, $userId);
+
+            // 🧹 LIMPIEZA DE URGENCIA: Asegurar que delivery_time_days sea un número natural limpio
+            if (isset($item['delivery_time_days'])) {
+                // Extrae solo los dígitos numéricos enviados desde la vista
+                preg_match('/\d+/', trim($item['delivery_time_days']), $matches);
+                $item['delivery_time_days'] = !empty($matches[0]) ? (int)$matches[0] : 1;
+            }
+
+            $this->quotationModel->addItem($quotationId, $item, $userId); // (O en el update según corresponda)
         }
 
         // 3. Registrar en Auditoría (Estándar Pro)
@@ -154,17 +162,38 @@ class QuotationsController
             exit;
         }
 
-        // Ejecutar la clonación en el modelo
+        // 1. OBTENEMOS LA COTIZACIÓN ORIGINAL
+        $originalQuotation = $this->quotationModel->getQuotationById((int)$quotationId);
+
+        if (!$originalQuotation) {
+            header('Location: index.php?page=my_quotations');
+            exit;
+        }
+
+        // 🔒 2. CANDADO DE SEGURIDAD EN EL SERVIDOR
+        $currentStatus = $originalQuotation['status'] ?? 'Borrador';
+        if ($currentStatus === 'Reemplazada') {
+            // Guardamos el mensaje de error en la sesión para mostrarlo como alerta en la bandeja
+            $_SESSION['app_alert'] = [
+                'message' => 'No se puede re-cotizar un documento que ya se encuentra reemplazado.',
+                'type'    => 'warning'
+            ];
+            header('Location: index.php?page=my_quotations');
+            exit;
+        }
+
+        // 🚀 3. SI PASA LA VALIDACIÓN, EJECUTAMOS LA CLONACIÓN
         $newQuotationId = $this->quotationModel->cloneAsNewVersion((int)$quotationId, (int)$userId);
 
         if ($newQuotationId) {
-            // Registrar auditoría opcional si gustas
-            // Redirigir al formulario de edición de la nueva versión creada
             header("Location: index.php?page=edit_quotation&id={$newQuotationId}");
             exit;
         } else {
-            // Manejar error de clonación
-            header('Location: index.php?page=my_quotations&error=clone_failed');
+            $_SESSION['app_alert'] = [
+                'message' => 'Ocurrió un error al intentar generar la nueva versión.',
+                'type'    => 'danger'
+            ];
+            header('Location: index.php?page=my_quotations');
             exit;
         }
     }
@@ -268,7 +297,15 @@ class QuotationsController
         $items = $_POST['items'] ?? [];
         foreach ($items as $index => $item) {
             $item['item_number'] = $index + 1;
-            $this->quotationModel->addItem((int)$quotationId, $item, $userId);
+
+            // 🧹 LIMPIEZA DE URGENCIA: Asegurar que delivery_time_days sea un número natural limpio
+            if (isset($item['delivery_time_days'])) {
+                // Extrae solo los dígitos numéricos enviados desde la vista
+                preg_match('/\d+/', trim($item['delivery_time_days']), $matches);
+                $item['delivery_time_days'] = !empty($matches[0]) ? (int)$matches[0] : 1;
+            }
+
+            $this->quotationModel->addItem($quotationId, $item, $userId); // (O en el update según corresponda)
         }
 
         // 5. Registrar auditoría de actualización o emisión

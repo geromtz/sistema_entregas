@@ -1,0 +1,18 @@
+# Dependencias y librerías de terceros (si las descargas externamente, aunque ya las tienes)
+/public/assets/libs/dompdf/lib/fonts/*.ufm
+/public/assets/libs/dompdf/lib/fonts/*.ttf
+
+# Configuración local (¡Muy importante para proteger tus credenciales de BD!)
+/config/db.php
+/config/database.php
+
+# Archivos de carga de usuarios y documentos generados (Storage)
+/storage/uploads/
+
+# Archivos temporales de depuración o logs del sistema
+/debug_post.txt
+*.log
+
+# Archivos propios del sistema operativo
+.DS_Store
+Thumbs.db

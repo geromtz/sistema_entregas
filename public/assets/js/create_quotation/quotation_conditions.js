@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // --- 💰 FUNCIÓN AUXILIAR PARA FORMATEAR MONEDA CON COMAS DE MILES ---
+    function formatMoney(amount) {
+        return parseFloat(amount || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
     // ----------------------------------------------------
     // ⏳ VIGENCIA DE PRECIOS DINÁMICA (DÍA / DÍAS)
     // ----------------------------------------------------
@@ -40,7 +48,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function updateCreditText() {
-            // Validamos que existan los elementos antes de manipularlos para evitar errores en consola
             if (!creditDaysNumber || !creditDaysLabel || !creditTermsHidden) return;
 
             let val = parseInt(creditDaysNumber.value.trim(), 10);
@@ -82,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ----------------------------------------------------
-    // 👁️ VISTA PREVIA DE COTIZACIÓN (MODAL)
+    // 👁️ VISTA PREVIA DE COTIZACIÓN (MODAL) CON FORMATO DE MILES
     // ----------------------------------------------------
     const previewBtn = document.getElementById("preview_quotation_btn");
     if (previewBtn) {
@@ -144,8 +151,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         <td class="text-center">${qty}</td>
                         <td><strong>${partNum}</strong></td>
                         <td>${description}</td>
-                        <td class="text-end">$ ${unitPrice.toFixed(2)}</td>
-                        <td class="text-end">$ ${totalRow.toFixed(2)}</td>
+                        <td class="text-end">$ ${formatMoney(unitPrice)}</td>
+                        <td class="text-end">$ ${formatMoney(totalRow)}</td>
                     `;
                     targetTbody.appendChild(tr);
                 });
@@ -158,9 +165,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const iva = calculatedSubtotal * 0.16;
             const total = calculatedSubtotal + iva;
 
-            document.getElementById("prev_subtotal").innerText = `$ ${calculatedSubtotal.toFixed(2)}`;
-            document.getElementById("prev_iva").innerText = `$ ${iva.toFixed(2)}`;
-            document.getElementById("prev_total").innerText = `$ ${total.toFixed(2)}`;
+            // 🔹 Aplicamos formatMoney para mostrar comas en subtotal, IVA y total de la vista previa
+            document.getElementById("prev_subtotal").innerText = `$ ${formatMoney(calculatedSubtotal)}`;
+            document.getElementById("prev_iva").innerText = `$ ${formatMoney(iva)}`;
+            document.getElementById("prev_total").innerText = `$ ${formatMoney(total)}`;
 
             const modalEl = document.getElementById("quotationPreviewModal");
             if (modalEl) {

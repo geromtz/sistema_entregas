@@ -44,11 +44,14 @@ class Quotation
                     c.business_name AS customer_name,
                     p.company_name AS prospect_name,
                     u.firstname, 
-                    u.apellidos
+                    u.apellidos,
+                    child.id AS replacement_id,
+                    child.folio AS replacement_folio
                 FROM quotations q
                 LEFT JOIN customers c ON c.id = q.customer_id
                 LEFT JOIN prospects p ON p.id = q.prospect_id
                 LEFT JOIN users u ON u.id = q.created_by
+                LEFT JOIN quotations child ON child.parent_quotation_id = q.id
                 WHERE q.created_by IN ($placeholders)
                 ORDER BY q.quotation_date DESC
             ";
@@ -175,9 +178,9 @@ class Quotation
             $series = $original['quotation_series'] ?? 'COT';
             $quotationNumber = $original['quotation_number']; // Mismo número base de la cotización madre
             $dateFormatted = date('Ymd');
-            
+
             $newVersionNumber = (int)($original['version'] ?? 1) + 1;
-            
+
             // Folio estructurado con sufijo de versión limpio (Ej: COT-2-20260922-1-V2)
             $newFolio = "{$series}-{$userId}-{$dateFormatted}-{$quotationNumber}-V{$newVersionNumber}";
 
@@ -268,6 +271,9 @@ class Quotation
                 )
             ");
 
+            // 🔢 Limpieza final a número entero positivo para la BD
+            $cleanDeliveryDays = max(1, (int)($item['delivery_time_days'] ?? 1));
+
             return $stmt->execute([
                 ':quotId'   => $quotationId,
                 ':itemNum'  => $item['item_number'] ?? 1,
@@ -275,7 +281,7 @@ class Quotation
                 ':qty'      => $item['quantity'] ?? 1,
                 ':uPrice'   => $item['unit_price'] ?? 0.00,
                 ':tPrice'   => $item['total_price'] ?? 0.00,
-                ':delTime'  => $item['delivery_time_days'] ?? '4 a 7 días hábiles',
+                ':delTime'  => $cleanDeliveryDays, // 👈 ¡Solo números enteros limpios en la BD!
                 ':suppId'   => !empty($item['id_supplier']) ? (int)$item['id_supplier'] : null,
                 ':branchId' => !empty($item['id_branch']) ? (int)$item['id_branch'] : null,
                 ':pCost'    => $item['purchase_unit_cost'] ?? 0.00,
@@ -349,11 +355,16 @@ class Quotation
                     p.company_name AS prospect_name,
                     p.contact_name AS prospect_contact,
                     u.firstname, 
-                    u.apellidos
+                    u.apellidos,
+                    parent.folio AS parent_folio,
+                    child.id AS replacement_id,
+                    child.folio AS replacement_folio
                 FROM quotations q
                 LEFT JOIN customers c ON c.id = q.customer_id
                 LEFT JOIN prospects p ON p.id = q.prospect_id
                 LEFT JOIN users u ON u.id = q.created_by
+                LEFT JOIN quotations parent ON parent.id = q.parent_quotation_id
+                LEFT JOIN quotations child ON child.parent_quotation_id = q.id
                 WHERE q.id = :id
                 LIMIT 1
             ");

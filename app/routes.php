@@ -452,6 +452,30 @@ return [
         'method'     => 'cloneVersion',
         'public'     => false
     ],
-
-
+    // ================= MÓDULO DE REQUISICIONES INTERNAS =================
+    'convert_quotation_view' => [
+        'controller' => 'RequisitionsController',
+        'method'     => 'convertQuotationToRequisitionForm',
+        'public'     => false
+    ],
+    'store_requisition' => [
+        'controller' => 'RequisitionsController',
+        'method'     => 'storeRequisition',
+        'public'     => false
+    ],
+    'update_requisition' => [
+        'controller' => 'RequisitionsController',
+        'method'     => 'updateRequisition',
+        'public'     => false
+    ],
+    'my_requisitions' => [
+        'controller' => 'RequisitionsController',
+        'method'     => 'index',
+        'public'     => false
+    ],
+    'view_requisition_detail' => [
+        'controller' => 'RequisitionsController',
+        'method'     => 'viewDetail',
+        'public'     => false
+    ],
 ];
